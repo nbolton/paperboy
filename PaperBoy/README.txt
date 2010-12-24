@@ -1,6 +1,13 @@
 README
 ======
 
+
+Eclipse Android plugin
+----------------------
+
+http://developer.android.com/sdk/eclipse-adt.html#installing
+
+
 How to rotate the Android Emulator?
 -----------------------------------
 
