@@ -7,12 +7,10 @@ import org.anddev.andengine.engine.camera.Camera;
 import org.anddev.andengine.engine.options.EngineOptions;
 import org.anddev.andengine.engine.options.EngineOptions.ScreenOrientation;
 import org.anddev.andengine.engine.options.resolutionpolicy.RatioResolutionPolicy;
-import org.anddev.andengine.entity.primitive.Line;
 import org.anddev.andengine.entity.primitive.Rectangle;
 import org.anddev.andengine.entity.scene.Scene;
 import org.anddev.andengine.entity.scene.Scene.IOnSceneTouchListener;
 import org.anddev.andengine.entity.scene.background.ColorBackground;
-import org.anddev.andengine.entity.shape.RectangularShape;
 import org.anddev.andengine.entity.shape.Shape;
 import org.anddev.andengine.entity.sprite.AnimatedSprite;
 import org.anddev.andengine.entity.util.FPSLogger;
@@ -35,11 +33,8 @@ import android.hardware.SensorManager;
 import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.physics.box2d.Body;
 import com.badlogic.gdx.physics.box2d.FixtureDef;
-import com.badlogic.gdx.physics.box2d.JointDef;
 import com.badlogic.gdx.physics.box2d.PolygonShape;
 import com.badlogic.gdx.physics.box2d.BodyDef.BodyType;
-import com.badlogic.gdx.physics.box2d.JointDef.JointType;
-import com.badlogic.gdx.physics.box2d.joints.LineJointDef;
 import com.badlogic.gdx.physics.box2d.joints.RevoluteJointDef;
 
 public class StickManDemo2 extends BaseGameActivity implements IAccelerometerListener, IOnSceneTouchListener {
@@ -56,10 +51,6 @@ public class StickManDemo2 extends BaseGameActivity implements IAccelerometerLis
 	private TiledTextureRegion hexagonFaceTextureRegion;
 	private PhysicsWorld physicsWorld;
 	private int faceCount;
-	
-	private Line leftLeg;
-	private Line rightLeg;
-	private Line torso;
 	
 	@Override
 	public void onLoadComplete() {
@@ -109,8 +100,8 @@ public class StickManDemo2 extends BaseGameActivity implements IAccelerometerLis
 		float centreX = CAMERA_WIDTH / 2;
 		float centreY = CAMERA_HEIGHT / 2;
 		
-		//for (int i = 0; i < 4; i++)
-		//	addFace(centreX, centreY);
+		for (int i = 0; i < 4; i++)
+			addFace(centreX, centreY);
 
 		BodyPart leftLeg = addBodyPart1(centreX - 25, centreY + 150, 30, 100);
 		BodyPart rightLeg = addBodyPart1(centreX + 25, centreY + 150, -30, 100);
