@@ -37,7 +37,7 @@ import com.badlogic.gdx.physics.box2d.PolygonShape;
 import com.badlogic.gdx.physics.box2d.BodyDef.BodyType;
 import com.badlogic.gdx.physics.box2d.joints.RevoluteJointDef;
 
-public class StickManDemo2 extends BaseGameActivity implements IAccelerometerListener, IOnSceneTouchListener {
+public class StickManDemo3 extends BaseGameActivity implements IAccelerometerListener, IOnSceneTouchListener {
 
 	private static final int CAMERA_WIDTH = 720;
 	private static final int CAMERA_HEIGHT = 480;
@@ -55,94 +55,48 @@ public class StickManDemo2 extends BaseGameActivity implements IAccelerometerLis
 	@Override
 	public void onLoadComplete() {
 		
-		createStickMan();
+		createLowerBody();
 	}
 
-	private void createStickMan() {
-		
+	private void createLowerBody() {
+
 		float centreX = CAMERA_WIDTH / 2;
 		float centreY = CAMERA_HEIGHT / 2;
 		
-		for (int i = 0; i < 4; i++)
-			addFace(centreX, centreY);
+		//for (int i = 0; i < 4; i++)
+		//	addFace(centreX, centreY);
 
-		BodyPart torso = addBodyPart(centreX, centreY + 80, 0, 80);
-		BodyPart leftLeg = addBodyPart(centreX - 25, centreY + 150, 30, 100);
-		BodyPart rightLeg = addBodyPart(centreX + 25, centreY + 150, -30, 100);
-		BodyPart leftArm = addBodyPart(centreX - 25, centreY + 80, 100, 50);
-		BodyPart rightArm = addBodyPart(centreX + 25, centreY + 80, -100, 50);
-		BodyPart head = addHead(centreX, centreY + 40);
+		float groinX = centreX;
+		float groinY = centreY;
 
-		RevoluteJointDef leftLegJoint = new RevoluteJointDef();
-		RevoluteJointDef rightLegJoint = new RevoluteJointDef();
-		RevoluteJointDef leftArmJoint = new RevoluteJointDef();
-		RevoluteJointDef rightArmJoint = new RevoluteJointDef();
-		RevoluteJointDef headJoint = new RevoluteJointDef();
-		
-		leftLegJoint.lowerAngle = MathUtils.degToRad(-20);
-		leftLegJoint.upperAngle = MathUtils.degToRad(10);
-		leftLegJoint.enableLimit = true;
-		
-		rightLegJoint.lowerAngle = MathUtils.degToRad(-20);
-		rightLegJoint.upperAngle = MathUtils.degToRad(10);
-		rightLegJoint.enableLimit = true;
-		
-		leftArmJoint.lowerAngle = MathUtils.degToRad(-20);
-		leftArmJoint.upperAngle = MathUtils.degToRad(10);
-		leftArmJoint.enableLimit = true;
-		
-		rightArmJoint.lowerAngle = MathUtils.degToRad(-20);
-		rightArmJoint.upperAngle = MathUtils.degToRad(10);
-		rightArmJoint.enableLimit = true;
+		BodyPart torso = addBodyPart(groinX, groinY - 40, 180, 80);
+		BodyPart leftLeg = addBodyPart(groinX - 18, groinY + 40, 30, 100);
+		BodyPart rightLeg = addBodyPart(groinX + 18, groinY + 40, -30, 100);
 
-		headJoint.lowerAngle = MathUtils.degToRad(10);
-		headJoint.upperAngle = MathUtils.degToRad(10);
-		headJoint.enableLimit = true;
+		RevoluteJointDef leftJoint = new RevoluteJointDef();
+		RevoluteJointDef rightJoint = new RevoluteJointDef();
+		
+		/*leftJoint.lowerAngle = MathUtils.degToRad(-10);
+		leftJoint.upperAngle = MathUtils.degToRad(10);
+		
+		rightJoint.lowerAngle = MathUtils.degToRad(-10);
+		rightJoint.upperAngle = MathUtils.degToRad(10);*/
 		
 		// set leg joint to the bottom of the torso
-		Vector2 legAnchor = torso.physicsBody.getWorldCenter(); 
-		legAnchor.y += (torso.shape.getHeightScaled() * 0.5) / PIXEL_TO_METER_RATIO_DEFAULT;
-
-		Vector2 armAnchor = torso.physicsBody.getWorldCenter();
+		Vector2 anchor = torso.physicsBody.getWorldCenter(); 
+		//anchor.y += (torso.shape.getHeightScaled() * 0.5) / PIXEL_TO_METER_RATIO_DEFAULT;
 		
-		Vector2 headAnchor = torso.physicsBody.getWorldCenter();
-		headAnchor.y -= (torso.shape.getHeightScaled() * 0.5) / PIXEL_TO_METER_RATIO_DEFAULT;
-		
-		leftLegJoint.initialize(torso.physicsBody, leftLeg.physicsBody, legAnchor);
-		rightLegJoint.initialize(torso.physicsBody, rightLeg.physicsBody, legAnchor);
-		leftArmJoint.initialize(torso.physicsBody, leftArm.physicsBody, armAnchor);
-		rightArmJoint.initialize(torso.physicsBody, rightArm.physicsBody, armAnchor);
-		headJoint.initialize(torso.physicsBody, head.physicsBody, headAnchor);
+		leftJoint.initialize(torso.physicsBody, leftLeg.physicsBody, anchor);
+		rightJoint.initialize(torso.physicsBody, rightLeg.physicsBody, anchor);
 
-		physicsWorld.createJoint(leftLegJoint);
-		physicsWorld.createJoint(rightLegJoint);
-		physicsWorld.createJoint(leftArmJoint);
-		physicsWorld.createJoint(rightArmJoint);
-		physicsWorld.createJoint(headJoint);
+		physicsWorld.createJoint(leftJoint);
+		physicsWorld.createJoint(rightJoint);
 	}
-
+	
 	class BodyPart
 	{
 		public Body physicsBody;
 		public Shape shape;
-	}
-	
-	private BodyPart addHead(float x, float y) {
-
-		final Scene scene = mEngine.getScene();
-		
-		Rectangle shape = new Rectangle(x, y, 40, 40);
-		shape.setColor(0, 0, 0);
-		
-		Body body = PhysicsFactory.createBoxBody(physicsWorld, shape, BodyType.DynamicBody, FIXTURE_DEF);
-		
-		scene.getTopLayer().addEntity(shape);
-		physicsWorld.registerPhysicsConnector(new PhysicsConnector(shape, body, true, true, false, false));
-		
-		BodyPart bodyPart = new BodyPart();
-		bodyPart.physicsBody = body;
-		bodyPart.shape = shape;
-		return bodyPart;
 	}
 
 	private BodyPart addBodyPart(float x, float y, float rotation, float length) {
@@ -150,21 +104,17 @@ public class StickManDemo2 extends BaseGameActivity implements IAccelerometerLis
 		final Scene scene = mEngine.getScene();
 		
 		Rectangle shape = new Rectangle(x, y, 5, length);
-		shape.setRotation(rotation);
-		//Line shape = new Line(x + 50, y + 50, x + 100, y + 100, 5);
-		//Line shape = new Line(0, 0, 100, 0, 5);
-		shape.setColor(0, 0, 0);
-
-		//Vector2[] vertices = {
-		//	new Vector2(-50 / PIXEL_TO_METER_RATIO_DEFAULT, -50 / PIXEL_TO_METER_RATIO_DEFAULT),
-		//	new Vector2(50 / PIXEL_TO_METER_RATIO_DEFAULT, 50 / PIXEL_TO_METER_RATIO_DEFAULT),
-		//};
 		
-		//Body body = PhysicsFactory.createLineBody(physicsWorld, shape, FIXTURE_DEF);
-		Body body = PhysicsFactory.createBoxBody(physicsWorld, shape, BodyType.DynamicBody, FIXTURE_DEF);
-		//Body body = PhysicsFactory.createPolygonBody(physicsWorld, shape, vertices, BodyType.DynamicBody, FIXTURE_DEF);
+		// rotate rectangle (easier than drawing a polygon manually)
+		shape.setRotation(rotation);
+		
+		// all lines are black
+		shape.setColor(0, 0, 0);
 		
 		scene.getTopLayer().addEntity(shape);
+
+		// make a physics body from the shape, and associate them
+		Body body = PhysicsFactory.createBoxBody(physicsWorld, shape, BodyType.DynamicBody, FIXTURE_DEF);
 		physicsWorld.registerPhysicsConnector(new PhysicsConnector(shape, body, true, true, false, false));
 		
 		BodyPart bodyPart = new BodyPart();
@@ -172,6 +122,38 @@ public class StickManDemo2 extends BaseGameActivity implements IAccelerometerLis
 		bodyPart.shape = shape;
 		return bodyPart;
 	}
+	
+	/*private Line createLeftLeg(float x, float y)
+	{
+		Line line = new Line(x, y, x - 60, y + 100);
+		line.setColor(0.1f, 0.1f, 0.1f);
+		return line;
+	}
+	
+	private Line createRightLeg(float x, float y)
+	{
+		Line line = new Line(x, y, x + 60, y + 100);
+		line.setColor(0.1f, 0.1f, 0.1f);
+		return line;
+	}
+	
+	private Line createTorso(float x, float y)
+	{
+		Line line = new Line(x, y, x, y + 100);
+		line.setColor(0.1f, 0.1f, 0.1f);
+		return line;
+	}
+	
+	private void addBodyPart(Line line)
+	{
+		final Scene scene = mEngine.getScene();
+
+		Body body = PhysicsFactory.createLineBody(physicsWorld, line, FIXTURE_DEF);
+		
+		scene.getTopLayer().addEntity(line);
+		
+		physicsWorld.registerPhysicsConnector(new PhysicsConnector(line, body, true, true, false, false));
+	}*/
 
 	@Override
 	public Engine onLoadEngine() {
@@ -257,11 +239,11 @@ public class StickManDemo2 extends BaseGameActivity implements IAccelerometerLis
 			
 		} else if ((faceCount % 4) == 2) {
 			face = new AnimatedSprite(x, y, triangleFaceTextureRegion);
-			body = StickManDemo2.createTriangleBody(physicsWorld, face, BodyType.DynamicBody, FIXTURE_DEF);
+			body = StickManDemo3.createTriangleBody(physicsWorld, face, BodyType.DynamicBody, FIXTURE_DEF);
 			
 		} else {
 			face = new AnimatedSprite(x, y, hexagonFaceTextureRegion);
-			body = StickManDemo2.createHexagonBody(physicsWorld, face, BodyType.DynamicBody, FIXTURE_DEF);
+			body = StickManDemo3.createHexagonBody(physicsWorld, face, BodyType.DynamicBody, FIXTURE_DEF);
 		}
 		
 		face.animate(200);
