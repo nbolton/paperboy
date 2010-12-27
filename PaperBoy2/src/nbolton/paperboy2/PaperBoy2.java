@@ -17,6 +17,8 @@ import com.badlogic.gdx.physics.box2d.World;
 import com.badlogic.gdx.physics.box2d.BodyDef.BodyType;
 import com.badlogic.gdx.physics.box2d.joints.MouseJoint;
 import com.badlogic.gdx.physics.box2d.joints.MouseJointDef;
+import com.badlogic.gdx.physics.box2d.joints.RevoluteJointDef;
+import com.badlogic.gdx.utils.MathUtils;
 
 public class PaperBoy2 implements ApplicationListener, InputProcessor {
 	
@@ -31,8 +33,8 @@ public class PaperBoy2 implements ApplicationListener, InputProcessor {
 
 	/** ground body to connect the mouse joint to **/
 	protected Body groundBody;
-	protected Body groundBody2;
-	protected Body groundBody3;
+	protected Body leftWall;
+	protected Body rightWall;
 
 	/** our mouse joint **/
 	protected MouseJoint mouseJoint = null;
@@ -41,10 +43,93 @@ public class PaperBoy2 implements ApplicationListener, InputProcessor {
 	protected Body hitBody = null;
 	
 	protected void createWorld (World world) {
-		createGround(world);
-		createGround2(world);
-		createGround3(world);
+		
+		groundBody = createWall(world, 50, 1, 0);
+		createWall(world, 1, 50, -23);
+		createWall(world, 1, 50, 23);
+		
+		//createBoxes(world);
+		//createCircles(world);
 
+		Body head = createHead(0, 20);
+		Body torso = createBodyPart(0, 15.5f, 1, 2, 0);
+		Body leftLeg = createBodyPart(-4, 10, 1, 4, -40 * MathUtils.degreesToRadians);
+		Body rightLeg = createBodyPart(4, 10, 1, 4, 40 * MathUtils.degreesToRadians);
+		Body leftArm = createBodyPart(-5, 17, 1, 4, -80 * MathUtils.degreesToRadians);
+		Body rightArm = createBodyPart(5, 17, 1, 4, 80 * MathUtils.degreesToRadians);
+
+		joinLimb(world, torso, head, new Vector2(0, 3));
+		joinLimb(world, torso, leftLeg, new Vector2(0, -3));
+		joinLimb(world, torso, rightLeg, new Vector2(0, -3));
+		joinLimb(world, torso, leftArm, new Vector2(0, 0));
+		joinLimb(world, torso, rightArm, new Vector2(0, 0));
+	}
+
+	private Body createHead(float x, float y) {
+
+		CircleShape shape = new CircleShape();
+		shape.setRadius(2);
+
+		BodyDef bodyDef = new BodyDef();
+		bodyDef.type = BodyType.DynamicBody;
+		bodyDef.position.x = x;
+		bodyDef.position.y = y;
+		Body body = world.createBody(bodyDef);
+
+		// add the boxPoly shape as a fixture
+		body.createFixture(shape, 10);
+		shape.dispose();
+		
+		return body;
+	}
+
+	private void joinLimb(World world, Body torso, Body limb, Vector2 anchor) {
+		RevoluteJointDef jointDef = new RevoluteJointDef();
+		jointDef.initialize(torso, limb, torso.getWorldPoint(anchor));
+		jointDef.lowerAngle = -10 * MathUtils.degreesToRadians;
+		jointDef.upperAngle = 10 * MathUtils.degreesToRadians;
+		jointDef.enableLimit = true;
+		world.createJoint(jointDef);
+	}
+
+	private Body createBodyPart(float x, float y, float width, float height, float angle) {
+		
+		PolygonShape torsoPoly = new PolygonShape();
+		torsoPoly.setAsBox(width, height);
+		
+		BodyDef torsoBodyDef = new BodyDef();
+		torsoBodyDef.type = BodyType.DynamicBody;
+		torsoBodyDef.position.y = y;
+		torsoBodyDef.position.x = x;
+		torsoBodyDef.angle = angle;
+		
+		Body body = world.createBody(torsoBodyDef);
+		
+		body.createFixture(torsoPoly, 10);
+		torsoPoly.dispose();
+		
+		return body;
+	}
+
+	/*private void createCircles(World world) {
+		// next we add a few more circles
+		CircleShape circleShape = new CircleShape();
+		circleShape.setRadius(1);
+
+		for (int i = 0; i < 10; i++) {
+			BodyDef circleBodyDef = new BodyDef();
+			circleBodyDef.type = BodyType.DynamicBody;
+			circleBodyDef.position.x = -24 + (float)(Math.random() * 48);
+			circleBodyDef.position.y = 10 + (float)(Math.random() * 100);
+			Body circleBody = world.createBody(circleBodyDef);
+
+			// add the boxPoly shape as a fixture
+			circleBody.createFixture(circleShape, 10);
+		}
+		circleShape.dispose();
+	}
+
+	private void createBoxes(World world) {
 		// next we create 50 boxes at random locations above the ground
 		// body. First we create a nice polygon representing a box 2 meters
 		// wide and high.
@@ -69,25 +154,9 @@ public class PaperBoy2 implements ApplicationListener, InputProcessor {
 
 		// we are done, all that's left is disposing the boxPoly
 		boxPoly.dispose();
+	}*/
 
-		// next we add a few more circles
-		CircleShape circleShape = new CircleShape();
-		circleShape.setRadius(1);
-
-		for (int i = 0; i < 10; i++) {
-			BodyDef circleBodyDef = new BodyDef();
-			circleBodyDef.type = BodyType.DynamicBody;
-			circleBodyDef.position.x = -24 + (float)(Math.random() * 48);
-			circleBodyDef.position.y = 10 + (float)(Math.random() * 100);
-			Body circleBody = world.createBody(circleBodyDef);
-
-			// add the boxPoly shape as a fixture
-			circleBody.createFixture(circleShape, 10);
-		}
-		circleShape.dispose();
-	}
-
-	private void createGround(World world) {
+	private Body createWall(World world, float width, float height, float xOffset) {
 		// next we create a static ground platform. This platform
 		// is not moveable and will not react to any influences from
 		// outside. It will however influence other bodies. First we
@@ -95,74 +164,24 @@ public class PaperBoy2 implements ApplicationListener, InputProcessor {
 		// it will be 100 meters wide and 2 meters high, centered
 		// around the origin
 		PolygonShape groundPoly = new PolygonShape();
-		groundPoly.setAsBox(50, 1);
+		groundPoly.setAsBox(width, height);
 
 		// next we create the body for the ground platform. It's
 		// simply a static body.
 		BodyDef groundBodyDef = new BodyDef();
 		groundBodyDef.type = BodyType.StaticBody;
-		groundBody = world.createBody(groundBodyDef);
+		groundBodyDef.position.x = xOffset;
+		
+		Body body = world.createBody(groundBodyDef);
 
 		// finally we add a fixture to the body using the polygon
 		// defined above. Note that we have to dispose PolygonShapes
 		// and CircleShapes once they are no longer used. This is the
 		// only time you have to care explicitely for memomry managment.
-		groundBody.createFixture(groundPoly, 10);
+		body.createFixture(groundPoly, 10);
 		groundPoly.dispose();
-	}
-
-	private void createGround2(World world) {
-		// next we create a static ground platform. This platform
-		// is not moveable and will not react to any influences from
-		// outside. It will however influence other bodies. First we
-		// create a PolygonShape that holds the form of the platform.
-		// it will be 100 meters wide and 2 meters high, centered
-		// around the origin
-		PolygonShape groundPoly = new PolygonShape();
-		groundPoly.setAsBox(1, 50);
-
-		// next we create the body for the ground platform. It's
-		// simply a static body.
-		BodyDef groundBodyDef = new BodyDef();
-		groundBodyDef.type = BodyType.StaticBody;
-		groundBodyDef.position.x = -23;
 		
-		groundBody2 = world.createBody(groundBodyDef);
-		
-
-		// finally we add a fixture to the body using the polygon
-		// defined above. Note that we have to dispose PolygonShapes
-		// and CircleShapes once they are no longer used. This is the
-		// only time you have to care explicitely for memomry managment.
-		groundBody2.createFixture(groundPoly, 10);
-		groundPoly.dispose();
-	}
-
-	private void createGround3(World world) {
-		// next we create a static ground platform. This platform
-		// is not moveable and will not react to any influences from
-		// outside. It will however influence other bodies. First we
-		// create a PolygonShape that holds the form of the platform.
-		// it will be 100 meters wide and 2 meters high, centered
-		// around the origin
-		PolygonShape groundPoly = new PolygonShape();
-		groundPoly.setAsBox(1, 50);
-
-		// next we create the body for the ground platform. It's
-		// simply a static body.
-		BodyDef groundBodyDef = new BodyDef();
-		groundBodyDef.type = BodyType.StaticBody;
-		groundBodyDef.position.x = 23;
-		
-		groundBody3 = world.createBody(groundBodyDef);
-		
-
-		// finally we add a fixture to the body using the polygon
-		// defined above. Note that we have to dispose PolygonShapes
-		// and CircleShapes once they are no longer used. This is the
-		// only time you have to care explicitely for memomry managment.
-		groundBody3.createFixture(groundPoly, 10);
-		groundPoly.dispose();
+		return body;
 	}
 
 	/** temp vector **/
