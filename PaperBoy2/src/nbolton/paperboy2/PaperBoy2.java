@@ -18,6 +18,7 @@ import com.badlogic.gdx.physics.box2d.World;
 import com.badlogic.gdx.physics.box2d.BodyDef.BodyType;
 import com.badlogic.gdx.physics.box2d.joints.MouseJoint;
 import com.badlogic.gdx.physics.box2d.joints.MouseJointDef;
+import com.badlogic.gdx.physics.box2d.joints.RevoluteJoint;
 import com.badlogic.gdx.physics.box2d.joints.RevoluteJointDef;
 import com.badlogic.gdx.utils.MathUtils;
 
@@ -43,29 +44,56 @@ public class PaperBoy2 implements ApplicationListener, InputProcessor {
 	/** a hit body **/
 	protected Body hitBody = null;
 	
+	private Vector2 gravity = new Vector2(0, -20);
+	
 	protected void createWorld() {
 		
 		groundBody = createWall(50, 1, 0);
 		createWall(1, 50, -23);
 		createWall(1, 50, 23);
 
-		createStickManFaceForward();
+		createCircles();
+		createBoxes();
+		
+		createStickManSideOn();
 	}
+	
+	RevoluteJoint leftArmJoint, rightArmJoint, leftLegJoint, rightLegJoint;
 
-	private void createStickManFaceForward() {
+	private void createStickManSideOn() {
 
 		Body torso = createRectangleBodyPart(0, 15, 1, 3, 0);
 		Body head = createRoundBodyPart(0, 20, 2);
-		Body leftLeg = createRectangleBodyPart(-2, 11, 1, 4, -40 * MathUtils.degreesToRadians);
-		Body rightLeg = createRectangleBodyPart(2, 11, 1, 4, 40 * MathUtils.degreesToRadians);
-		Body leftArm = createRectangleBodyPart(-2, 16.5f, 1, 3, -80 * MathUtils.degreesToRadians);
-		Body rightArm = createRectangleBodyPart(2, 16.5f, 1, 3, 80 * MathUtils.degreesToRadians);
+		Body leftLeg = createRectangleBodyPart(-0.5f, 11, 1, 3, -5 * MathUtils.degreesToRadians);
+		Body rightLeg = createRectangleBodyPart(0.5f, 11, 1, 3, 5 * MathUtils.degreesToRadians);
+		Body leftArm = createRectangleBodyPart(-0.5f, 16.5f, 1, 1.7f, -20 * MathUtils.degreesToRadians);
+		Body rightArm = createRectangleBodyPart(0.5f, 16.5f, 1, 1.7f, 20 * MathUtils.degreesToRadians);
+
+		float legAngle = 60 * MathUtils.degreesToRadians;
+		float armAngle = 70 * MathUtils.degreesToRadians;
+		float headAngle = 20 * MathUtils.degreesToRadians;
 		
-		joinBodyParts(torso, head, new Vector2(0, 3));
-		joinBodyParts(torso, leftLeg, new Vector2(0, -2));
-		joinBodyParts(torso, rightLeg, new Vector2(0, -2));
-		joinBodyParts(torso, leftArm, new Vector2(0, 1.5f));
-		joinBodyParts(torso, rightArm, new Vector2(0, 1.5f));
+		joinBodyParts(torso, head, new Vector2(0, 3), headAngle);
+		leftLegJoint = joinBodyParts(torso, leftLeg, new Vector2(0, -2), legAngle);
+		rightLegJoint = joinBodyParts(torso, rightLeg, new Vector2(0, -2), legAngle);
+		leftArmJoint = joinBodyParts(torso, leftArm, new Vector2(0, 2.5f), armAngle);
+		rightArmJoint = joinBodyParts(torso, rightArm, new Vector2(0, 2.5f), armAngle);
+	}
+
+	private RevoluteJoint joinBodyParts(Body a, Body b, Vector2 anchor, float angle) {
+		
+		RevoluteJointDef jointDef = new RevoluteJointDef();
+		
+		jointDef.initialize(a, b, a.getWorldPoint(anchor));
+
+		jointDef.enableLimit = true;
+		jointDef.lowerAngle = -angle;
+		jointDef.upperAngle = angle;
+
+		jointDef.enableMotor = true;
+		jointDef.maxMotorTorque = 1000000;
+		
+		return (RevoluteJoint)world.createJoint(jointDef);
 	}
 
 	private Body createRoundBodyPart(float x, float y, float radius) {
@@ -82,6 +110,8 @@ public class PaperBoy2 implements ApplicationListener, InputProcessor {
 		FixtureDef fixtureDef = new FixtureDef();
 		fixtureDef.shape = shape;
 		fixtureDef.density = 10;
+		
+		// -1 means no body parts collide
 		fixtureDef.filter.groupIndex = -1;
 
 		// add the boxPoly shape as a fixture
@@ -89,16 +119,6 @@ public class PaperBoy2 implements ApplicationListener, InputProcessor {
 		shape.dispose();
 		
 		return body;
-	}
-
-	private void joinBodyParts(Body a, Body b, Vector2 anchor) {
-		
-		RevoluteJointDef jointDef = new RevoluteJointDef();
-		jointDef.initialize(a, b, a.getWorldPoint(anchor));
-		jointDef.lowerAngle = -10 * MathUtils.degreesToRadians;
-		jointDef.upperAngle = 10 * MathUtils.degreesToRadians;
-		jointDef.enableLimit = true;
-		world.createJoint(jointDef);
 	}
 
 	private Body createRectangleBodyPart(float x, float y, float width, float height, float angle) {
@@ -117,6 +137,8 @@ public class PaperBoy2 implements ApplicationListener, InputProcessor {
 		FixtureDef fixtureDef = new FixtureDef();
 		fixtureDef.shape = shape;
 		fixtureDef.density = 10;
+		
+		// -1 means no body parts collide
 		fixtureDef.filter.groupIndex = -1;
 		
 		body.createFixture(fixtureDef);
@@ -125,12 +147,12 @@ public class PaperBoy2 implements ApplicationListener, InputProcessor {
 		return body;
 	}
 
-	/*private void createCircles(World world) {
+	private void createCircles() {
 		// next we add a few more circles
 		CircleShape circleShape = new CircleShape();
 		circleShape.setRadius(1);
 
-		for (int i = 0; i < 10; i++) {
+		for (int i = 0; i < 5; i++) {
 			BodyDef circleBodyDef = new BodyDef();
 			circleBodyDef.type = BodyType.DynamicBody;
 			circleBodyDef.position.x = -24 + (float)(Math.random() * 48);
@@ -143,7 +165,7 @@ public class PaperBoy2 implements ApplicationListener, InputProcessor {
 		circleShape.dispose();
 	}
 
-	private void createBoxes(World world) {
+	private void createBoxes() {
 		// next we create 50 boxes at random locations above the ground
 		// body. First we create a nice polygon representing a box 2 meters
 		// wide and high.
@@ -153,7 +175,7 @@ public class PaperBoy2 implements ApplicationListener, InputProcessor {
 		// next we create the 50 box bodies using the PolygonShape we just
 		// defined. This process is similar to the one we used for the ground
 		// body. Note that we reuse the polygon for each body fixture.
-		for (int i = 0; i < 20; i++) {
+		for (int i = 0; i < 5; i++) {
 			// Create the BodyDef, set a random position above the
 			// ground and create a new body
 			BodyDef boxBodyDef = new BodyDef();
@@ -168,7 +190,7 @@ public class PaperBoy2 implements ApplicationListener, InputProcessor {
 
 		// we are done, all that's left is disposing the boxPoly
 		boxPoly.dispose();
-	}*/
+	}
 
 	private Body createWall(float width, float height, float xOffset) {
 		// next we create a static ground platform. This platform
@@ -198,17 +220,37 @@ public class PaperBoy2 implements ApplicationListener, InputProcessor {
 		return body;
 	}
 
+	float maxSpeed = 2;
+	float motorSpeed = 1;
+	int motorDirection = 1;
+	
 	/** temp vector **/
 	protected Vector2 tmp = new Vector2();
 
 	@Override public void render () {
+		
+		float delta = Gdx.app.getGraphics().getDeltaTime();
+		
 		// update the world with a fixed time step
-		world.step(Gdx.app.getGraphics().getDeltaTime(), 8, 3);
+		world.step(delta, 8, 3);
 
 		// clear the screen and setup the projection matrix
 		GL10 gl = Gdx.app.getGraphics().getGL10();
 		gl.glClear(GL10.GL_COLOR_BUFFER_BIT);
 		camera.setMatrices();
+		
+		if (motorSpeed > maxSpeed)
+			motorDirection = -1;
+		
+		if (motorSpeed < -maxSpeed)
+			motorDirection = 1;
+		
+		motorSpeed += delta * motorDirection * 2;
+
+		leftArmJoint.setMotorSpeed(motorSpeed);
+		rightArmJoint.setMotorSpeed(-motorSpeed);
+		leftLegJoint.setMotorSpeed(-motorSpeed);
+		rightLegJoint.setMotorSpeed(motorSpeed);
 
 		// render the world using the debug renderer
 		renderer.render(world);			
@@ -230,7 +272,7 @@ public class PaperBoy2 implements ApplicationListener, InputProcessor {
 		renderer = new Box2DDebugRenderer();
 
 		// create the world
-		world = new World(new Vector2(0, -10), true);
+		world = new World(gravity, true);
 
 		// we also need an invisible zero size ground body
 		// to which we can connect the mouse joint
