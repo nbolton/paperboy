@@ -11,6 +11,7 @@ import com.badlogic.gdx.physics.box2d.BodyDef;
 import com.badlogic.gdx.physics.box2d.Box2DDebugRenderer;
 import com.badlogic.gdx.physics.box2d.CircleShape;
 import com.badlogic.gdx.physics.box2d.Fixture;
+import com.badlogic.gdx.physics.box2d.FixtureDef;
 import com.badlogic.gdx.physics.box2d.PolygonShape;
 import com.badlogic.gdx.physics.box2d.QueryCallback;
 import com.badlogic.gdx.physics.box2d.World;
@@ -42,71 +43,84 @@ public class PaperBoy2 implements ApplicationListener, InputProcessor {
 	/** a hit body **/
 	protected Body hitBody = null;
 	
-	protected void createWorld (World world) {
+	protected void createWorld() {
 		
-		groundBody = createWall(world, 50, 1, 0);
-		createWall(world, 1, 50, -23);
-		createWall(world, 1, 50, 23);
-		
-		//createBoxes(world);
-		//createCircles(world);
+		groundBody = createWall(50, 1, 0);
+		createWall(1, 50, -23);
+		createWall(1, 50, 23);
 
-		Body head = createHead(0, 20);
-		Body torso = createBodyPart(0, 15.5f, 1, 2, 0);
-		Body leftLeg = createBodyPart(-4, 10, 1, 4, -40 * MathUtils.degreesToRadians);
-		Body rightLeg = createBodyPart(4, 10, 1, 4, 40 * MathUtils.degreesToRadians);
-		Body leftArm = createBodyPart(-5, 17, 1, 4, -80 * MathUtils.degreesToRadians);
-		Body rightArm = createBodyPart(5, 17, 1, 4, 80 * MathUtils.degreesToRadians);
-
-		joinLimb(world, torso, head, new Vector2(0, 3));
-		joinLimb(world, torso, leftLeg, new Vector2(0, -3));
-		joinLimb(world, torso, rightLeg, new Vector2(0, -3));
-		joinLimb(world, torso, leftArm, new Vector2(0, 0));
-		joinLimb(world, torso, rightArm, new Vector2(0, 0));
+		createStickManFaceForward();
 	}
 
-	private Body createHead(float x, float y) {
+	private void createStickManFaceForward() {
+
+		Body torso = createRectangleBodyPart(0, 15, 1, 3, 0);
+		Body head = createRoundBodyPart(0, 20, 2);
+		Body leftLeg = createRectangleBodyPart(-2, 11, 1, 4, -40 * MathUtils.degreesToRadians);
+		Body rightLeg = createRectangleBodyPart(2, 11, 1, 4, 40 * MathUtils.degreesToRadians);
+		Body leftArm = createRectangleBodyPart(-2, 16.5f, 1, 3, -80 * MathUtils.degreesToRadians);
+		Body rightArm = createRectangleBodyPart(2, 16.5f, 1, 3, 80 * MathUtils.degreesToRadians);
+		
+		joinBodyParts(torso, head, new Vector2(0, 3));
+		joinBodyParts(torso, leftLeg, new Vector2(0, -2));
+		joinBodyParts(torso, rightLeg, new Vector2(0, -2));
+		joinBodyParts(torso, leftArm, new Vector2(0, 1.5f));
+		joinBodyParts(torso, rightArm, new Vector2(0, 1.5f));
+	}
+
+	private Body createRoundBodyPart(float x, float y, float radius) {
 
 		CircleShape shape = new CircleShape();
-		shape.setRadius(2);
+		shape.setRadius(radius);
 
 		BodyDef bodyDef = new BodyDef();
 		bodyDef.type = BodyType.DynamicBody;
 		bodyDef.position.x = x;
 		bodyDef.position.y = y;
 		Body body = world.createBody(bodyDef);
+		
+		FixtureDef fixtureDef = new FixtureDef();
+		fixtureDef.shape = shape;
+		fixtureDef.density = 10;
+		fixtureDef.filter.groupIndex = -1;
 
 		// add the boxPoly shape as a fixture
-		body.createFixture(shape, 10);
+		body.createFixture(fixtureDef);
 		shape.dispose();
 		
 		return body;
 	}
 
-	private void joinLimb(World world, Body torso, Body limb, Vector2 anchor) {
+	private void joinBodyParts(Body a, Body b, Vector2 anchor) {
+		
 		RevoluteJointDef jointDef = new RevoluteJointDef();
-		jointDef.initialize(torso, limb, torso.getWorldPoint(anchor));
+		jointDef.initialize(a, b, a.getWorldPoint(anchor));
 		jointDef.lowerAngle = -10 * MathUtils.degreesToRadians;
 		jointDef.upperAngle = 10 * MathUtils.degreesToRadians;
 		jointDef.enableLimit = true;
 		world.createJoint(jointDef);
 	}
 
-	private Body createBodyPart(float x, float y, float width, float height, float angle) {
+	private Body createRectangleBodyPart(float x, float y, float width, float height, float angle) {
 		
-		PolygonShape torsoPoly = new PolygonShape();
-		torsoPoly.setAsBox(width, height);
+		PolygonShape shape = new PolygonShape();
+		shape.setAsBox(width, height);
 		
-		BodyDef torsoBodyDef = new BodyDef();
-		torsoBodyDef.type = BodyType.DynamicBody;
-		torsoBodyDef.position.y = y;
-		torsoBodyDef.position.x = x;
-		torsoBodyDef.angle = angle;
+		BodyDef bodyDef = new BodyDef();
+		bodyDef.type = BodyType.DynamicBody;
+		bodyDef.position.y = y;
+		bodyDef.position.x = x;
+		bodyDef.angle = angle;
 		
-		Body body = world.createBody(torsoBodyDef);
+		Body body = world.createBody(bodyDef);
 		
-		body.createFixture(torsoPoly, 10);
-		torsoPoly.dispose();
+		FixtureDef fixtureDef = new FixtureDef();
+		fixtureDef.shape = shape;
+		fixtureDef.density = 10;
+		fixtureDef.filter.groupIndex = -1;
+		
+		body.createFixture(fixtureDef);
+		shape.dispose();
 		
 		return body;
 	}
@@ -156,7 +170,7 @@ public class PaperBoy2 implements ApplicationListener, InputProcessor {
 		boxPoly.dispose();
 	}*/
 
-	private Body createWall(World world, float width, float height, float xOffset) {
+	private Body createWall(float width, float height, float xOffset) {
 		// next we create a static ground platform. This platform
 		// is not moveable and will not react to any influences from
 		// outside. It will however influence other bodies. First we
@@ -224,7 +238,7 @@ public class PaperBoy2 implements ApplicationListener, InputProcessor {
 		groundBody = world.createBody(bodyDef);
 
 		// call abstract method to populate the world
-		createWorld(world);
+		createWorld();
 		
 		Gdx.input.setInputProcessor(this);
 	}
