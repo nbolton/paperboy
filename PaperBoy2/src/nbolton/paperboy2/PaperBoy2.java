@@ -46,7 +46,7 @@ public class PaperBoy2 implements ApplicationListener, InputProcessor {
 	/** a hit body **/
 	protected Body hitBody = null;
 	
-	private Vector2 gravity = new Vector2(0, -20);
+	private Vector2 gravity = new Vector2(0, -20); // TODO: use earth gravity (-9.8)
 
 	final short FILTER_NONE = 0x0000;
 	final short FILTER_SUPPORT = 0x0001;
@@ -64,7 +64,7 @@ public class PaperBoy2 implements ApplicationListener, InputProcessor {
 		createCircles();
 		createBoxes();
 		
-		createStickManSideOn(0, -5);
+		createStickManSideOn(0, 5);
 	}
 	
 	RevoluteJoint leftArmJoint, rightArmJoint, 
@@ -72,7 +72,7 @@ public class PaperBoy2 implements ApplicationListener, InputProcessor {
 		leftLegBottomJoint, rightLegBottomJoint;
 	Body torso, supportLeft, supportRight;
 	
-	float originalY;
+	float supportY;
 
 	float legAngle = (float)Math.toRadians(70);
 	float armAngle = 70 * MathUtils.degreesToRadians;
@@ -80,36 +80,35 @@ public class PaperBoy2 implements ApplicationListener, InputProcessor {
 
 	private void createStickManSideOn(float x, float y) {
 		
-		originalY = y + 17f;
+		torso = createRectangleBodyPart(x, y + 5, 0.25f, 1.5f);
+		Body head = createRoundBodyPart(x, y + 7.3f, 1);
 		
-		torso = createRectangleBodyPart(x + 0, y + 15, 1, 3);
-		Body head = createRoundBodyPart(x + 0, y + 20, 2);
+		Body leftLegTop = createRectangleBodyPart(x, y + 3, 0.25f, 1.5f);
+		Body rightLegTop = createRectangleBodyPart(x, y + 3, 0.25f, 1.5f);
+		Body leftLegBottom = createRectangleBodyPart(x, y + 1, 0.25f, 1.5f);
+		Body rightLegBottom = createRectangleBodyPart(x, y + 1, 0.25f, 1.5f);
 		
-		Body leftLegTop = createRectangleBodyPart(x, y + 11, 1, 1.5f);
-		Body rightLegTop = createRectangleBodyPart(x, y + 11, 1, 1.5f);
-		Body leftLegBottom = createRectangleBodyPart(x, y + 9, 1, 1.5f);
-		Body rightLegBottom = createRectangleBodyPart(x, y + 9, 1, 1.5f);
+		Body leftArm = createRectangleBodyPart(x, y + 5, 0.25f, 1.2f);
+		Body rightArm = createRectangleBodyPart(x, y + 5, 0.25f, 1.2f);
 		
-		Body leftArm = createRectangleBodyPart(x, y + 16.5f, 1, 1.7f);
-		Body rightArm = createRectangleBodyPart(x, y + 16.5f, 1, 1.7f);
+		joinBodyParts(torso, head, new Vector2(0, 1), headAngle);
 		
-		joinBodyParts(torso, head, new Vector2(0, 3), headAngle);
+		leftLegTopJoint = joinBodyParts(torso, leftLegTop, new Vector2(0, -1), legAngle);
+		rightLegTopJoint = joinBodyParts(torso, rightLegTop, new Vector2(0, -1), legAngle);
+		leftLegBottomJoint = joinBodyParts(leftLegTop, leftLegBottom, new Vector2(0, -1), -legAngle * 0.7f, -0.3f, false);
+		rightLegBottomJoint = joinBodyParts(rightLegTop, rightLegBottom, new Vector2(0, -1), -legAngle * 0.7f, -0.3f, false);
 		
-		leftLegTopJoint = joinBodyParts(torso, leftLegTop, new Vector2(0, -2), legAngle);
-		rightLegTopJoint = joinBodyParts(torso, rightLegTop, new Vector2(0, -2), legAngle);
-		leftLegBottomJoint = joinBodyParts(leftLegTop, leftLegBottom, new Vector2(0, -1f), -legAngle * 0.7f, -0.3f, false);
-		rightLegBottomJoint = joinBodyParts(rightLegTop, rightLegBottom, new Vector2(0, -1f), -legAngle * 0.7f, -0.3f, false);
+		leftArmJoint = joinBodyParts(torso, leftArm, new Vector2(0, 1), armAngle);
+		rightArmJoint = joinBodyParts(torso, rightArm, new Vector2(0, 1), armAngle);
 		
-		leftArmJoint = joinBodyParts(torso, leftArm, new Vector2(0, 2.5f), armAngle);
-		rightArmJoint = joinBodyParts(torso, rightArm, new Vector2(0, 2.5f), armAngle);
+		supportY = y + 5;
+		supportLeft = createSupportBody(new Vector2(x - 6, supportY));
+		supportRight = createSupportBody(new Vector2(x + 6, supportY));
 
-		supportLeft = createSupportBody(new Vector2(x - 10, originalY));
-		supportRight = createSupportBody(new Vector2(x + 10, originalY));
-
-		joinSupportBody(torso, supportLeft, new Vector2(0, 2.5f));
-		joinSupportBody(torso, supportLeft, new Vector2(0, -2.5f));
-		joinSupportBody(torso, supportRight, new Vector2(0, 2.5f));
-		joinSupportBody(torso, supportRight, new Vector2(0, -2.5f));
+		joinSupportBody(head, supportLeft, new Vector2(0, 0));
+		joinSupportBody(torso, supportLeft, new Vector2(0, -1f));
+		joinSupportBody(head, supportRight, new Vector2(0, 0));
+		joinSupportBody(torso, supportRight, new Vector2(0, -1f));
 	}
 
 	private DistanceJoint joinSupportBody(Body torso, Body support, Vector2 torsoAnchor) {
@@ -363,12 +362,8 @@ public class PaperBoy2 implements ApplicationListener, InputProcessor {
 		leftLegTopJoint.setMotorSpeed(-motorVelocity);
 		rightLegTopJoint.setMotorSpeed(motorVelocity);
 		
-		Vector2 bodyBelowPos = getBodyBelow(torso);
-		float supportY = torso.getPosition().y + 3;
-		if (bodyBelowPos != null)
-			supportY = bodyBelowPos.y + 9;
-			
 		// ensure the support block stays on the same y plane, but follows the head.
+		float supportY = torso.getPosition().y - 1;
 		supportLeft.setTransform(new Vector2(torso.getPosition().x - 10, supportY), 0);
 		supportRight.setTransform(new Vector2(torso.getPosition().x + 10, supportY), 0);
 
@@ -376,10 +371,10 @@ public class PaperBoy2 implements ApplicationListener, InputProcessor {
 		renderer.render(world);			
 	}
 
-	private Vector2 getBodyBelow(Body body) {
+	/*private Vector2 getBodyBelow(Body body) {
 		
 		return groundBody.getPosition();
-		/*Vector2 bodyBelow = null;
+		Vector2 bodyBelow = null;
 		
 		while (world.getBodies().hasNext())
 		{
@@ -390,8 +385,8 @@ public class PaperBoy2 implements ApplicationListener, InputProcessor {
 			
 		}
 		
-		return bodyBelow;*/
-	}
+		return bodyBelow;
+	}*/
 
 	@Override public void create () {
 		// setup the camera. In Box2D we operate on a
