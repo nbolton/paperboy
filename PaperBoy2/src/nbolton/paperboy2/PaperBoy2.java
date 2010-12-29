@@ -56,12 +56,13 @@ public class PaperBoy2 implements ApplicationListener, InputProcessor {
 	
 	protected void createWorld() {
 		
-		groundBody = createWall(50, 1, 0);
-		createWall(1, 50, -23);
-		createWall(1, 50, 23);
+		groundBody = createWall(5000, 1, 0);
+		groundBody.getPosition().set(2500, 0);
+		//createWall(1, 50, -23);
+		//createWall(1, 50, 23);
 
-		//createCircles();
-		//createBoxes();
+		createCircles();
+		createBoxes();
 		
 		createStickManSideOn(0, -5);
 	}
@@ -81,16 +82,16 @@ public class PaperBoy2 implements ApplicationListener, InputProcessor {
 		
 		originalY = y + 17f;
 		
-		torso = createRectangleBodyPart(x + 0, y + 15, 1, 3, 0);
+		torso = createRectangleBodyPart(x + 0, y + 15, 1, 3);
 		Body head = createRoundBodyPart(x + 0, y + 20, 2);
 		
-		Body leftLegTop = createRectangleBodyPart(x, y + 11, 1, 1.5f, -5 * MathUtils.degreesToRadians);
-		Body rightLegTop = createRectangleBodyPart(x, y + 11, 1, 1.5f, 5 * MathUtils.degreesToRadians);
-		Body leftLegBottom = createRectangleBodyPart(x, y + 9, 1, 1.5f, -50 * MathUtils.degreesToRadians);
-		Body rightLegBottom = createRectangleBodyPart(x, y + 9, 1, 1.5f, -50 * MathUtils.degreesToRadians);
+		Body leftLegTop = createRectangleBodyPart(x, y + 11, 1, 1.5f);
+		Body rightLegTop = createRectangleBodyPart(x, y + 11, 1, 1.5f);
+		Body leftLegBottom = createRectangleBodyPart(x, y + 9, 1, 1.5f);
+		Body rightLegBottom = createRectangleBodyPart(x, y + 9, 1, 1.5f);
 		
-		Body leftArm = createRectangleBodyPart(x, y + 16.5f, 1, 1.7f, -20 * MathUtils.degreesToRadians);
-		Body rightArm = createRectangleBodyPart(x, y + 16.5f, 1, 1.7f, 20 * MathUtils.degreesToRadians);
+		Body leftArm = createRectangleBodyPart(x, y + 16.5f, 1, 1.7f);
+		Body rightArm = createRectangleBodyPart(x, y + 16.5f, 1, 1.7f);
 		
 		joinBodyParts(torso, head, new Vector2(0, 3), headAngle);
 		
@@ -144,7 +145,6 @@ public class PaperBoy2 implements ApplicationListener, InputProcessor {
 		jointDef.upperAngle = upperAngle;
 		
 		if (motor) {
-
 			jointDef.enableMotor = true;
 			jointDef.maxMotorTorque = 1000000;
 		}
@@ -179,7 +179,7 @@ public class PaperBoy2 implements ApplicationListener, InputProcessor {
 		return body;
 	}
 
-	private Body createRectangleBodyPart(float x, float y, float width, float height, float angle) {
+	private Body createRectangleBodyPart(float x, float y, float width, float height) {
 		
 		PolygonShape shape = new PolygonShape();
 		shape.setAsBox(width, height);
@@ -188,13 +188,13 @@ public class PaperBoy2 implements ApplicationListener, InputProcessor {
 		bodyDef.type = BodyType.DynamicBody;
 		bodyDef.position.y = y;
 		bodyDef.position.x = x;
-		//bodyDef.angle = angle;
 		
 		Body body = world.createBody(bodyDef);
 		
 		FixtureDef fixtureDef = new FixtureDef();
 		fixtureDef.shape = shape;
 		fixtureDef.density = 10;
+		fixtureDef.friction = 100;
 		
 		// -1 means no body parts collide
 		fixtureDef.filter.groupIndex = -1;
@@ -323,8 +323,8 @@ public class PaperBoy2 implements ApplicationListener, InputProcessor {
 		return body;
 	}
 
-	float motorSpeed = 150;
-	float motorVelocity = 0;
+	final float motorSpeed = 300;
+	float motorVelocity;
 	int motorDirection = 1;
 	
 	/** temp vector **/
@@ -336,6 +336,9 @@ public class PaperBoy2 implements ApplicationListener, InputProcessor {
 		
 		// update the world with a fixed time step
 		world.step(delta, 8, 3);
+		
+		// follow the boy!
+		camera.getPosition().set(torso.getPosition().x, torso.getPosition().y, 0);
 
 		// clear the screen and setup the projection matrix
 		GL10 gl = Gdx.app.getGraphics().getGL10();
@@ -360,12 +363,34 @@ public class PaperBoy2 implements ApplicationListener, InputProcessor {
 		leftLegTopJoint.setMotorSpeed(-motorVelocity);
 		rightLegTopJoint.setMotorSpeed(motorVelocity);
 		
+		Vector2 bodyBelowPos = getBodyBelow(torso);
+		float supportY = torso.getPosition().y + 3;
+		if (bodyBelowPos != null)
+			supportY = bodyBelowPos.y + 9;
+			
 		// ensure the support block stays on the same y plane, but follows the head.
-		supportLeft.setTransform(new Vector2(torso.getPosition().x - 10, originalY), 0);
-		supportRight.setTransform(new Vector2(torso.getPosition().x + 10, originalY), 0);
+		supportLeft.setTransform(new Vector2(torso.getPosition().x - 10, supportY), 0);
+		supportRight.setTransform(new Vector2(torso.getPosition().x + 10, supportY), 0);
 
 		// render the world using the debug renderer
 		renderer.render(world);			
+	}
+
+	private Vector2 getBodyBelow(Body body) {
+		
+		return groundBody.getPosition();
+		/*Vector2 bodyBelow = null;
+		
+		while (world.getBodies().hasNext())
+		{
+			// TODO: also check against size of body
+			
+			Body testBody = world.getBodies().next();
+			
+			
+		}
+		
+		return bodyBelow;*/
 	}
 
 	@Override public void create () {
