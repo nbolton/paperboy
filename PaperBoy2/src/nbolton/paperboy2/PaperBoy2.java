@@ -16,6 +16,8 @@ import com.badlogic.gdx.physics.box2d.PolygonShape;
 import com.badlogic.gdx.physics.box2d.QueryCallback;
 import com.badlogic.gdx.physics.box2d.World;
 import com.badlogic.gdx.physics.box2d.BodyDef.BodyType;
+import com.badlogic.gdx.physics.box2d.joints.DistanceJoint;
+import com.badlogic.gdx.physics.box2d.joints.DistanceJointDef;
 import com.badlogic.gdx.physics.box2d.joints.MouseJoint;
 import com.badlogic.gdx.physics.box2d.joints.MouseJointDef;
 import com.badlogic.gdx.physics.box2d.joints.RevoluteJoint;
@@ -45,6 +47,12 @@ public class PaperBoy2 implements ApplicationListener, InputProcessor {
 	protected Body hitBody = null;
 	
 	private Vector2 gravity = new Vector2(0, -20);
+
+	final short FILTER_NONE = 0x0000;
+	final short FILTER_SUPPORT = 0x0001;
+	final short FILTER_WALL = 0x0002;
+	final short FILTER_BOY = 0x0004;
+	final short FILTER_STUFF = 0x0008;
 	
 	protected void createWorld() {
 		
@@ -55,19 +63,21 @@ public class PaperBoy2 implements ApplicationListener, InputProcessor {
 		createCircles();
 		createBoxes();
 		
-		createStickManSideOn();
+		createStickManSideOn(0, -8);
 	}
 	
 	RevoluteJoint leftArmJoint, rightArmJoint, leftLegJoint, rightLegJoint;
+	Body torso, support;
+	Vector2 supportFirstPos;
 
-	private void createStickManSideOn() {
-
-		Body torso = createRectangleBodyPart(0, 15, 1, 3, 0);
-		Body head = createRoundBodyPart(0, 20, 2);
-		Body leftLeg = createRectangleBodyPart(-0.5f, 11, 1, 3, -5 * MathUtils.degreesToRadians);
-		Body rightLeg = createRectangleBodyPart(0.5f, 11, 1, 3, 5 * MathUtils.degreesToRadians);
-		Body leftArm = createRectangleBodyPart(-0.5f, 16.5f, 1, 1.7f, -20 * MathUtils.degreesToRadians);
-		Body rightArm = createRectangleBodyPart(0.5f, 16.5f, 1, 1.7f, 20 * MathUtils.degreesToRadians);
+	private void createStickManSideOn(float x, float y) {
+		
+		torso = createRectangleBodyPart(x + 0, y + 15, 1, 3, 0);
+		Body head = createRoundBodyPart(x + 0, y + 20, 2);
+		Body leftLeg = createRectangleBodyPart(x + -0.5f, y + 11, 1, 3, -5 * MathUtils.degreesToRadians);
+		Body rightLeg = createRectangleBodyPart(x + 0.5f, y + 11, 1, 3, 5 * MathUtils.degreesToRadians);
+		Body leftArm = createRectangleBodyPart(x + -0.5f, y + 16.5f, 1, 1.7f, -20 * MathUtils.degreesToRadians);
+		Body rightArm = createRectangleBodyPart(x + 0.5f, y + 16.5f, 1, 1.7f, 20 * MathUtils.degreesToRadians);
 
 		float legAngle = 60 * MathUtils.degreesToRadians;
 		float armAngle = 70 * MathUtils.degreesToRadians;
@@ -78,6 +88,26 @@ public class PaperBoy2 implements ApplicationListener, InputProcessor {
 		rightLegJoint = joinBodyParts(torso, rightLeg, new Vector2(0, -2), legAngle);
 		leftArmJoint = joinBodyParts(torso, leftArm, new Vector2(0, 2.5f), armAngle);
 		rightArmJoint = joinBodyParts(torso, rightArm, new Vector2(0, 2.5f), armAngle);
+		
+		supportFirstPos = new Vector2(x, y + 25);
+		support = createSupportBody(supportFirstPos);
+		joinSupportBody(torso, support);
+	}
+
+	private DistanceJoint joinSupportBody(Body torso, Body support) {
+		
+		DistanceJointDef jointDef = new DistanceJointDef();
+		
+		jointDef.initialize(
+			torso, 
+			support, 
+			torso.getWorldPoint(new Vector2(0, 2.5f)), 
+			support.getWorldCenter());
+		
+		jointDef.frequencyHz = 16f;
+		jointDef.dampingRatio = 0f;
+		
+		return (DistanceJoint)world.createJoint(jointDef);
 	}
 
 	private RevoluteJoint joinBodyParts(Body a, Body b, Vector2 anchor, float angle) {
@@ -113,6 +143,8 @@ public class PaperBoy2 implements ApplicationListener, InputProcessor {
 		
 		// -1 means no body parts collide
 		fixtureDef.filter.groupIndex = -1;
+		fixtureDef.filter.categoryBits = FILTER_BOY;
+		fixtureDef.filter.maskBits = FILTER_STUFF | FILTER_WALL;
 
 		// add the boxPoly shape as a fixture
 		body.createFixture(fixtureDef);
@@ -140,6 +172,34 @@ public class PaperBoy2 implements ApplicationListener, InputProcessor {
 		
 		// -1 means no body parts collide
 		fixtureDef.filter.groupIndex = -1;
+		fixtureDef.filter.categoryBits = FILTER_BOY;
+		fixtureDef.filter.maskBits = FILTER_STUFF | FILTER_WALL;
+		
+		body.createFixture(fixtureDef);
+		shape.dispose();
+		
+		return body;
+	}
+	
+	private Body createSupportBody(Vector2 position)
+	{
+		PolygonShape shape = new PolygonShape();
+		shape.setAsBox(1, 1);
+		
+		BodyDef bodyDef = new BodyDef();
+		bodyDef.type = BodyType.DynamicBody;
+		bodyDef.position.x = position.x;
+		bodyDef.position.y = position.y;
+		
+		Body body = world.createBody(bodyDef);
+		
+		FixtureDef fixtureDef = new FixtureDef();
+		fixtureDef.shape = shape;
+		fixtureDef.density = 10;
+		
+		// don't collide with anything
+		fixtureDef.filter.categoryBits = FILTER_SUPPORT;
+		fixtureDef.filter.maskBits = FILTER_WALL;
 		
 		body.createFixture(fixtureDef);
 		shape.dispose();
@@ -159,8 +219,15 @@ public class PaperBoy2 implements ApplicationListener, InputProcessor {
 			circleBodyDef.position.y = 10 + (float)(Math.random() * 100);
 			Body circleBody = world.createBody(circleBodyDef);
 
+			FixtureDef fixtureDef = new FixtureDef();
+			fixtureDef.shape = circleShape;
+			fixtureDef.density = 10;
+			
+			fixtureDef.filter.categoryBits = FILTER_STUFF;
+			fixtureDef.filter.maskBits = FILTER_STUFF | FILTER_BOY | FILTER_WALL;
+			
 			// add the boxPoly shape as a fixture
-			circleBody.createFixture(circleShape, 10);
+			circleBody.createFixture(fixtureDef);
 		}
 		circleShape.dispose();
 	}
@@ -184,8 +251,15 @@ public class PaperBoy2 implements ApplicationListener, InputProcessor {
 			boxBodyDef.position.y = 10 + (float)(Math.random() * 100);
 			Body boxBody = world.createBody(boxBodyDef);
 
+			FixtureDef fixtureDef = new FixtureDef();
+			fixtureDef.shape = boxPoly;
+			fixtureDef.density = 10;
+
+			fixtureDef.filter.categoryBits = FILTER_STUFF;
+			fixtureDef.filter.maskBits = FILTER_STUFF | FILTER_BOY | FILTER_WALL;
+			
 			// add the boxPoly shape as a fixture
-			boxBody.createFixture(boxPoly, 10);
+			boxBody.createFixture(fixtureDef);
 		}
 
 		// we are done, all that's left is disposing the boxPoly
@@ -210,11 +284,14 @@ public class PaperBoy2 implements ApplicationListener, InputProcessor {
 		
 		Body body = world.createBody(groundBodyDef);
 
-		// finally we add a fixture to the body using the polygon
-		// defined above. Note that we have to dispose PolygonShapes
-		// and CircleShapes once they are no longer used. This is the
-		// only time you have to care explicitely for memomry managment.
-		body.createFixture(groundPoly, 10);
+		FixtureDef fixtureDef = new FixtureDef();
+		fixtureDef.shape = groundPoly;
+		fixtureDef.density = 10;
+		
+		fixtureDef.filter.categoryBits = FILTER_WALL;
+		fixtureDef.filter.maskBits = FILTER_BOY | FILTER_STUFF | FILTER_SUPPORT;
+		
+		body.createFixture(fixtureDef);
 		groundPoly.dispose();
 		
 		return body;
@@ -251,6 +328,9 @@ public class PaperBoy2 implements ApplicationListener, InputProcessor {
 		rightArmJoint.setMotorSpeed(-motorSpeed);
 		leftLegJoint.setMotorSpeed(-motorSpeed);
 		rightLegJoint.setMotorSpeed(motorSpeed);
+		
+		// ensure the support block stays on the same y plane, but follows the head.
+		support.setTransform(new Vector2(torso.getPosition().x, supportFirstPos.y), 0);
 
 		// render the world using the debug renderer
 		renderer.render(world);			
