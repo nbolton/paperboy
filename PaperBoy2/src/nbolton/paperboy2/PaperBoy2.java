@@ -60,68 +60,94 @@ public class PaperBoy2 implements ApplicationListener, InputProcessor {
 		createWall(1, 50, -23);
 		createWall(1, 50, 23);
 
-		createCircles();
-		createBoxes();
+		//createCircles();
+		//createBoxes();
 		
-		createStickManSideOn(0, -8);
+		createStickManSideOn(0, -5);
 	}
 	
-	RevoluteJoint leftArmJoint, rightArmJoint, leftLegJoint, rightLegJoint;
-	Body torso, support;
-	Vector2 supportFirstPos;
+	RevoluteJoint leftArmJoint, rightArmJoint, 
+		leftLegTopJoint, rightLegTopJoint,
+		leftLegBottomJoint, rightLegBottomJoint;
+	Body torso, supportLeft, supportRight;
+	
+	float originalY;
+
+	float legAngle = (float)Math.toRadians(70);
+	float armAngle = 70 * MathUtils.degreesToRadians;
+	float headAngle = 20 * MathUtils.degreesToRadians;
 
 	private void createStickManSideOn(float x, float y) {
 		
+		originalY = y + 17f;
+		
 		torso = createRectangleBodyPart(x + 0, y + 15, 1, 3, 0);
 		Body head = createRoundBodyPart(x + 0, y + 20, 2);
-		Body leftLeg = createRectangleBodyPart(x + -0.5f, y + 11, 1, 3, -5 * MathUtils.degreesToRadians);
-		Body rightLeg = createRectangleBodyPart(x + 0.5f, y + 11, 1, 3, 5 * MathUtils.degreesToRadians);
-		Body leftArm = createRectangleBodyPart(x + -0.5f, y + 16.5f, 1, 1.7f, -20 * MathUtils.degreesToRadians);
-		Body rightArm = createRectangleBodyPart(x + 0.5f, y + 16.5f, 1, 1.7f, 20 * MathUtils.degreesToRadians);
-
-		float legAngle = 60 * MathUtils.degreesToRadians;
-		float armAngle = 70 * MathUtils.degreesToRadians;
-		float headAngle = 20 * MathUtils.degreesToRadians;
+		
+		Body leftLegTop = createRectangleBodyPart(x, y + 11, 1, 1.5f, -5 * MathUtils.degreesToRadians);
+		Body rightLegTop = createRectangleBodyPart(x, y + 11, 1, 1.5f, 5 * MathUtils.degreesToRadians);
+		Body leftLegBottom = createRectangleBodyPart(x, y + 9, 1, 1.5f, -50 * MathUtils.degreesToRadians);
+		Body rightLegBottom = createRectangleBodyPart(x, y + 9, 1, 1.5f, -50 * MathUtils.degreesToRadians);
+		
+		Body leftArm = createRectangleBodyPart(x, y + 16.5f, 1, 1.7f, -20 * MathUtils.degreesToRadians);
+		Body rightArm = createRectangleBodyPart(x, y + 16.5f, 1, 1.7f, 20 * MathUtils.degreesToRadians);
 		
 		joinBodyParts(torso, head, new Vector2(0, 3), headAngle);
-		leftLegJoint = joinBodyParts(torso, leftLeg, new Vector2(0, -2), legAngle);
-		rightLegJoint = joinBodyParts(torso, rightLeg, new Vector2(0, -2), legAngle);
+		
+		leftLegTopJoint = joinBodyParts(torso, leftLegTop, new Vector2(0, -2), legAngle);
+		rightLegTopJoint = joinBodyParts(torso, rightLegTop, new Vector2(0, -2), legAngle);
+		leftLegBottomJoint = joinBodyParts(leftLegTop, leftLegBottom, new Vector2(0, -1f), -legAngle * 0.7f, -0.3f, false);
+		rightLegBottomJoint = joinBodyParts(rightLegTop, rightLegBottom, new Vector2(0, -1f), -legAngle * 0.7f, -0.3f, false);
+		
 		leftArmJoint = joinBodyParts(torso, leftArm, new Vector2(0, 2.5f), armAngle);
 		rightArmJoint = joinBodyParts(torso, rightArm, new Vector2(0, 2.5f), armAngle);
-		
-		supportFirstPos = new Vector2(x, y + 25);
-		support = createSupportBody(supportFirstPos);
-		joinSupportBody(torso, support);
+
+		supportLeft = createSupportBody(new Vector2(x - 10, originalY));
+		supportRight = createSupportBody(new Vector2(x + 10, originalY));
+
+		joinSupportBody(torso, supportLeft, new Vector2(0, 2.5f));
+		joinSupportBody(torso, supportLeft, new Vector2(0, -2.5f));
+		joinSupportBody(torso, supportRight, new Vector2(0, 2.5f));
+		joinSupportBody(torso, supportRight, new Vector2(0, -2.5f));
 	}
 
-	private DistanceJoint joinSupportBody(Body torso, Body support) {
+	private DistanceJoint joinSupportBody(Body torso, Body support, Vector2 torsoAnchor) {
 		
 		DistanceJointDef jointDef = new DistanceJointDef();
 		
 		jointDef.initialize(
 			torso, 
 			support, 
-			torso.getWorldPoint(new Vector2(0, 2.5f)), 
+			torso.getWorldPoint(torsoAnchor), 
 			support.getWorldCenter());
 		
 		jointDef.frequencyHz = 16f;
-		jointDef.dampingRatio = 0f;
+		jointDef.dampingRatio = 1f;
 		
 		return (DistanceJoint)world.createJoint(jointDef);
 	}
-
+	
 	private RevoluteJoint joinBodyParts(Body a, Body b, Vector2 anchor, float angle) {
 		
+		return joinBodyParts(a, b, anchor, -angle, angle, true);
+	}
+	
+	private RevoluteJoint joinBodyParts(
+		Body a, Body b, Vector2 anchor, float lowerAngle, float upperAngle, boolean motor) {
+
 		RevoluteJointDef jointDef = new RevoluteJointDef();
 		
 		jointDef.initialize(a, b, a.getWorldPoint(anchor));
-
+		
 		jointDef.enableLimit = true;
-		jointDef.lowerAngle = -angle;
-		jointDef.upperAngle = angle;
+		jointDef.lowerAngle = lowerAngle;
+		jointDef.upperAngle = upperAngle;
+		
+		if (motor) {
 
-		jointDef.enableMotor = true;
-		jointDef.maxMotorTorque = 1000000;
+			jointDef.enableMotor = true;
+			jointDef.maxMotorTorque = 1000000;
+		}
 		
 		return (RevoluteJoint)world.createJoint(jointDef);
 	}
@@ -162,7 +188,7 @@ public class PaperBoy2 implements ApplicationListener, InputProcessor {
 		bodyDef.type = BodyType.DynamicBody;
 		bodyDef.position.y = y;
 		bodyDef.position.x = x;
-		bodyDef.angle = angle;
+		//bodyDef.angle = angle;
 		
 		Body body = world.createBody(bodyDef);
 		
@@ -297,8 +323,8 @@ public class PaperBoy2 implements ApplicationListener, InputProcessor {
 		return body;
 	}
 
-	float maxSpeed = 2;
-	float motorSpeed = 1;
+	float motorSpeed = 150;
+	float motorVelocity = 0;
 	int motorDirection = 1;
 	
 	/** temp vector **/
@@ -316,21 +342,27 @@ public class PaperBoy2 implements ApplicationListener, InputProcessor {
 		gl.glClear(GL10.GL_COLOR_BUFFER_BIT);
 		camera.setMatrices();
 		
-		if (motorSpeed > maxSpeed)
+		// pick arbitrary joint for angle
+		float angle = rightLegTopJoint.getJointAngle();
+		
+		if (angle > legAngle) {
 			motorDirection = -1;
+		}
 		
-		if (motorSpeed < -maxSpeed)
+		if (angle < -legAngle) {
 			motorDirection = 1;
+		}
 		
-		motorSpeed += delta * motorDirection * 2;
+		motorVelocity = delta * motorDirection * motorSpeed;
 
-		leftArmJoint.setMotorSpeed(motorSpeed);
-		rightArmJoint.setMotorSpeed(-motorSpeed);
-		leftLegJoint.setMotorSpeed(-motorSpeed);
-		rightLegJoint.setMotorSpeed(motorSpeed);
+		leftArmJoint.setMotorSpeed(motorVelocity);
+		rightArmJoint.setMotorSpeed(-motorVelocity);
+		leftLegTopJoint.setMotorSpeed(-motorVelocity);
+		rightLegTopJoint.setMotorSpeed(motorVelocity);
 		
 		// ensure the support block stays on the same y plane, but follows the head.
-		support.setTransform(new Vector2(torso.getPosition().x, supportFirstPos.y), 0);
+		supportLeft.setTransform(new Vector2(torso.getPosition().x - 10, originalY), 0);
+		supportRight.setTransform(new Vector2(torso.getPosition().x + 10, originalY), 0);
 
 		// render the world using the debug renderer
 		renderer.render(world);			
