@@ -1,5 +1,7 @@
 package nbolton.paperboy2;
 
+import java.util.Iterator;
+
 import com.badlogic.gdx.ApplicationListener;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.InputProcessor;
@@ -22,7 +24,6 @@ import com.badlogic.gdx.physics.box2d.joints.MouseJoint;
 import com.badlogic.gdx.physics.box2d.joints.MouseJointDef;
 import com.badlogic.gdx.physics.box2d.joints.RevoluteJoint;
 import com.badlogic.gdx.physics.box2d.joints.RevoluteJointDef;
-import com.badlogic.gdx.utils.MathUtils;
 
 public class PaperBoy2 implements ApplicationListener, InputProcessor {
 	
@@ -45,8 +46,6 @@ public class PaperBoy2 implements ApplicationListener, InputProcessor {
 
 	/** a hit body **/
 	protected Body hitBody = null;
-	
-	private Vector2 gravity = new Vector2(0, -20); // TODO: use earth gravity (-9.8)
 
 	final short FILTER_NONE = 0x0000;
 	final short FILTER_SUPPORT = 0x0001;
@@ -61,8 +60,8 @@ public class PaperBoy2 implements ApplicationListener, InputProcessor {
 		//createWall(1, 50, -23);
 		//createWall(1, 50, 23);
 
-		createCircles();
-		createBoxes();
+		//createCircles();
+		//createBoxes();
 		
 		createStickManSideOn(0, 5);
 	}
@@ -74,32 +73,32 @@ public class PaperBoy2 implements ApplicationListener, InputProcessor {
 	
 	float supportY;
 
-	float legAngle = (float)Math.toRadians(70);
-	float armAngle = 70 * MathUtils.degreesToRadians;
-	float headAngle = 20 * MathUtils.degreesToRadians;
+	float legAngle = (float)Math.toRadians(60);
+	float armAngle = (float)Math.toRadians(60);
+	float headAngle = (float)Math.toRadians(30);
 
 	private void createStickManSideOn(float x, float y) {
 		
 		torso = createRectangleBodyPart(x, y + 5, 0.25f, 1.5f);
-		Body head = createRoundBodyPart(x, y + 7.3f, 1);
+		Body head = createRoundBodyPart(x, y + 7.4f, 1);
 		
-		Body leftLegTop = createRectangleBodyPart(x, y + 3, 0.25f, 1.5f);
-		Body rightLegTop = createRectangleBodyPart(x, y + 3, 0.25f, 1.5f);
-		Body leftLegBottom = createRectangleBodyPart(x, y + 1, 0.25f, 1.5f);
-		Body rightLegBottom = createRectangleBodyPart(x, y + 1, 0.25f, 1.5f);
+		Body leftLegTop = createRectangleBodyPart(x, y + 2.7f, 0.25f, 1);
+		Body rightLegTop = createRectangleBodyPart(x, y + 2.7f, 0.25f, 1);
+		Body leftLegBottom = createRectangleBodyPart(x, y + 1, 0.25f, 1);
+		Body rightLegBottom = createRectangleBodyPart(x, y + 1, 0.25f, 1);
 		
 		Body leftArm = createRectangleBodyPart(x, y + 5, 0.25f, 1.2f);
 		Body rightArm = createRectangleBodyPart(x, y + 5, 0.25f, 1.2f);
 		
-		joinBodyParts(torso, head, new Vector2(0, 1), headAngle);
+		joinBodyParts(torso, head, new Vector2(0, 1.6f), headAngle);
 		
-		leftLegTopJoint = joinBodyParts(torso, leftLegTop, new Vector2(0, -1), legAngle);
-		rightLegTopJoint = joinBodyParts(torso, rightLegTop, new Vector2(0, -1), legAngle);
-		leftLegBottomJoint = joinBodyParts(leftLegTop, leftLegBottom, new Vector2(0, -1), -legAngle * 0.7f, -0.3f, false);
-		rightLegBottomJoint = joinBodyParts(rightLegTop, rightLegBottom, new Vector2(0, -1), -legAngle * 0.7f, -0.3f, false);
+		leftLegTopJoint = joinBodyParts(torso, leftLegTop, new Vector2(0, -1.2f), legAngle);
+		rightLegTopJoint = joinBodyParts(torso, rightLegTop, new Vector2(0, -1.2f), legAngle);
+		//leftLegBottomJoint = joinBodyParts(leftLegTop, leftLegBottom, new Vector2(0, -1), -legAngle * 1.5f, -0.3f, true);
+		//rightLegBottomJoint = joinBodyParts(rightLegTop, rightLegBottom, new Vector2(0, -1), -legAngle * 1.5f, -0.3f, true);
 		
-		leftArmJoint = joinBodyParts(torso, leftArm, new Vector2(0, 1), armAngle);
-		rightArmJoint = joinBodyParts(torso, rightArm, new Vector2(0, 1), armAngle);
+		leftArmJoint = joinBodyParts(torso, leftArm, new Vector2(0, 1), -armAngle * 0.7f, armAngle, true);
+		rightArmJoint = joinBodyParts(torso, rightArm, new Vector2(0, 1), -armAngle * 0.7f, armAngle, true);
 		
 		supportY = y + 5;
 		supportLeft = createSupportBody(new Vector2(x - 6, supportY));
@@ -145,7 +144,7 @@ public class PaperBoy2 implements ApplicationListener, InputProcessor {
 		
 		if (motor) {
 			jointDef.enableMotor = true;
-			jointDef.maxMotorTorque = 1000000;
+			jointDef.maxMotorTorque = 10000000;
 		}
 		
 		return (RevoluteJoint)world.createJoint(jointDef);
@@ -322,9 +321,11 @@ public class PaperBoy2 implements ApplicationListener, InputProcessor {
 		return body;
 	}
 
-	final float motorSpeed = 300;
-	float motorVelocity;
-	int motorDirection = 1;
+	final float motorSpeed = 100f;
+	float leftMotorVelocity;
+	float rightMotorVelocity;
+	int leftMotorDirection = 1;
+	int rightMotorDirection = -1;
 	
 	/** temp vector **/
 	protected Vector2 tmp = new Vector2();
@@ -344,67 +345,105 @@ public class PaperBoy2 implements ApplicationListener, InputProcessor {
 		gl.glClear(GL10.GL_COLOR_BUFFER_BIT);
 		camera.setMatrices();
 		
-		// pick arbitrary joint for angle
-		float angle = rightLegTopJoint.getJointAngle();
-		
-		if (angle > legAngle) {
-			motorDirection = -1;
-		}
-		
-		if (angle < -legAngle) {
-			motorDirection = 1;
-		}
-		
-		motorVelocity = delta * motorDirection * motorSpeed;
+		float leftAngle = leftLegTopJoint.getJointAngle();
+		float rightAngle = rightLegTopJoint.getJointAngle();
+		float legAngleShort = legAngle * 0.8f;
 
-		leftArmJoint.setMotorSpeed(motorVelocity);
-		rightArmJoint.setMotorSpeed(-motorVelocity);
-		leftLegTopJoint.setMotorSpeed(-motorVelocity);
-		rightLegTopJoint.setMotorSpeed(motorVelocity);
+		if (rightAngle > legAngleShort) {
+			
+			rightMotorDirection = -1;
+		}
+		
+		if (rightAngle < -legAngleShort) {
+			
+			rightMotorDirection = 1;
+		}
+
+		if (leftAngle > legAngleShort) {
+			
+			leftMotorDirection = -1;
+		}
+		
+		if (leftAngle < -legAngleShort) {
+			
+			leftMotorDirection = 1;
+		}
+		
+		System.out.println("a: " + leftAngle + " / m: " + leftMotorDirection);
+		
+		//rightLegBottomJoint.setMotorSpeed(8);
+		//leftLegBottomJoint.setMotorSpeed(-8);
+
+		leftMotorVelocity = delta * leftMotorDirection * motorSpeed;
+		rightMotorVelocity = delta * rightMotorDirection * motorSpeed;
+		
+		leftLegTopJoint.setMotorSpeed(leftMotorVelocity * 0.9f);
+		rightLegTopJoint.setMotorSpeed(rightMotorVelocity * 0.9f);
+		
+		//leftArmJoint.setMotorSpeed(-leftMotorVelocity * 0.5f);
+		//rightArmJoint.setMotorSpeed(-rightMotorVelocity * 0.5f);
 		
 		// ensure the support block stays on the same y plane, but follows the head.
-		float supportY = torso.getPosition().y - 1;
+		//float supportY = torso.getPosition().y;
+		float supportY = 7;
 		supportLeft.setTransform(new Vector2(torso.getPosition().x - 10, supportY), 0);
 		supportRight.setTransform(new Vector2(torso.getPosition().x + 10, supportY), 0);
 
 		// render the world using the debug renderer
-		renderer.render(world);			
+		renderer.render(world);
 	}
 
-	/*private Vector2 getBodyBelow(Body body) {
+	/*Body aabbHit = null;
+	private Body getBodyBelow(Body body) {
 		
-		return groundBody.getPosition();
-		Vector2 bodyBelow = null;
+		Body found = null;
 		
-		while (world.getBodies().hasNext())
-		{
-			// TODO: also check against size of body
+		Iterator<Body> bodies = world.getBodies();
+		while (bodies.hasNext()) {
 			
-			Body testBody = world.getBodies().next();
+			QueryCallback aabb = new QueryCallback() {
+				
+				@Override
+				public boolean reportFixture(Fixture arg0) {
+					
+					aabbHit = arg0.getBody();
+					return true;
+				}
+			};
 			
+			Body test = bodies.next();
+			Vector2 testPos = test.getPosition();
+			world.QueryAABB(aabb, testPos.x, testPos.y, testPos.x, testPos.y);
 			
+			if ((testPos.y < body.getPosition().y) && (aabbHit != null)) {
+				
+				float distanceLast = 0;
+				if (found != null)
+					distanceLast = Math.abs(found.getPosition().x - body.getPosition().x);
+				else
+					found = test;
+				
+				float distanceThis = Math.abs(testPos.x - body.getPosition().x);
+				
+				if (distanceThis < distanceLast)
+					found = test;
+			}
 		}
 		
-		return bodyBelow;
+		return found;
 	}*/
 
 	@Override public void create () {
-		// setup the camera. In Box2D we operate on a
-		// meter scale, pixels won't do it. So we use
-		// an orthographic camera with a viewport of
-		// 48 meters in width and 32 meters in height.
-		// We also position the camera so that it
-		// looks at (0,16) (that's where the middle of the
-		// screen will be located).
+		
 		camera = new OrthographicCamera();
-		camera.setViewport(48, 32);
+		camera.setViewport(24, 16);
 		camera.getPosition().set(0, 15, 0);
 
 		// create the debug renderer
 		renderer = new Box2DDebugRenderer();
 
 		// create the world
-		world = new World(gravity, true);
+		world = new World(new Vector2(0, -9.8f), true);
 
 		// we also need an invisible zero size ground body
 		// to which we can connect the mouse joint
