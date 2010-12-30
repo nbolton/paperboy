@@ -55,7 +55,7 @@ public class PaperBoy2 implements ApplicationListener, InputProcessor {
 	
 	protected void createWorld() {
 		
-		groundBody = createWall(5000, 1, 0);
+		groundBody = createWall(5000, 0.1f, 0);
 		groundBody.getPosition().set(2500, 0);
 		//createWall(1, 50, -23);
 		//createWall(1, 50, 23);
@@ -92,13 +92,13 @@ public class PaperBoy2 implements ApplicationListener, InputProcessor {
 		
 		joinBodyParts(torso, head, new Vector2(0, 1.6f), headAngle);
 		
-		leftLegTopJoint = joinBodyParts(torso, leftLegTop, new Vector2(0, -1.2f), 0.1f, legAngle, true);
-		rightLegTopJoint = joinBodyParts(torso, rightLegTop, new Vector2(0, -1.2f), 0.1f, legAngle, true);
-		leftLegBottomJoint = joinBodyParts(leftLegTop, leftLegBottom, new Vector2(0, -1), -legAngle * 1.5f, 0, true);
-		rightLegBottomJoint = joinBodyParts(rightLegTop, rightLegBottom, new Vector2(0, -1), -legAngle * 1.5f, 0, true);
+		leftLegTopJoint = joinBodyParts(torso, leftLegTop, new Vector2(0, -1.2f), 0.1f, legAngle);
+		rightLegTopJoint = joinBodyParts(torso, rightLegTop, new Vector2(0, -1.2f), 0.1f, legAngle);
+		leftLegBottomJoint = joinBodyParts(leftLegTop, leftLegBottom, new Vector2(0, -1), -legAngle * 1.5f, 0);
+		rightLegBottomJoint = joinBodyParts(rightLegTop, rightLegBottom, new Vector2(0, -1), -legAngle * 1.5f, 0);
 		
-		leftArmJoint = joinBodyParts(torso, leftArm, new Vector2(0, 1), -armAngle * 0.7f, armAngle, true);
-		rightArmJoint = joinBodyParts(torso, rightArm, new Vector2(0, 1), -armAngle * 0.7f, armAngle, true);
+		leftArmJoint = joinBodyParts(torso, leftArm, new Vector2(0, 1), -armAngle * 0.7f, armAngle);
+		rightArmJoint = joinBodyParts(torso, rightArm, new Vector2(0, 1), -armAngle * 0.7f, armAngle);
 		
 		//torsoSupport = createSupportBody(new Vector2(x, y + 5));
 		//joinSupportBody(torso, torsoSupport, new Vector2(0, 0));
@@ -124,11 +124,11 @@ public class PaperBoy2 implements ApplicationListener, InputProcessor {
 	
 	private RevoluteJoint joinBodyParts(Body a, Body b, Vector2 anchor, float angle) {
 		
-		return joinBodyParts(a, b, anchor, -angle, angle, true);
+		return joinBodyParts(a, b, anchor, -angle, angle);
 	}
 	
 	private RevoluteJoint joinBodyParts(
-		Body a, Body b, Vector2 anchor, float lowerAngle, float upperAngle, boolean motor) {
+		Body a, Body b, Vector2 anchor, float lowerAngle, float upperAngle) {
 
 		RevoluteJointDef jointDef = new RevoluteJointDef();
 		
@@ -137,11 +137,6 @@ public class PaperBoy2 implements ApplicationListener, InputProcessor {
 		jointDef.enableLimit = true;
 		jointDef.lowerAngle = lowerAngle;
 		jointDef.upperAngle = upperAngle;
-		
-		if (motor) {
-			//jointDef.enableMotor = true;
-			//jointDef.maxMotorTorque = 10000000;
-		}
 		
 		return (RevoluteJoint)world.createJoint(jointDef);
 	}
