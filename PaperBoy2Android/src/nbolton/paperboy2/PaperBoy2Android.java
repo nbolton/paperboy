@@ -1,6 +1,5 @@
 package nbolton.paperboy2;
 
-import nbolton.paperboy2.PaperBoy2;
 import android.os.Bundle;
 
 import com.badlogic.gdx.backends.android.AndroidApplication;
