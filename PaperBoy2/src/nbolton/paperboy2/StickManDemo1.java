@@ -23,55 +23,87 @@ import com.badlogic.gdx.physics.box2d.joints.RevoluteJointDef;
 
 public class StickManDemo1 implements ApplicationListener, InputProcessor {
 	
-	/** the camera **/
-	protected OrthographicCamera camera;
+	OrthographicCamera camera;
+	Box2DDebugRenderer renderer;
+	World world;
 
-	/** the renderer **/
-	protected Box2DDebugRenderer renderer;
+	Body groundBody;
+	Body leftWall;
+	Body rightWall;
 
-	/** our box2D world **/
-	protected World world;
+	MouseJoint mouseJoint;
+	Fixture hitFixture;
 
-	/** ground body to connect the mouse joint to **/
-	protected Body groundBody;
-	protected Body leftWall;
-	protected Body rightWall;
-
-	/** our mouse joint **/
-	protected MouseJoint mouseJoint = null;
-
-	/** a hit body **/
-	protected Body hitBody = null;
+	Fixture walkLeftButton;
+	Fixture walkRightButton;
+	Fixture jumpButton;
+	Fixture grabButton;
 
 	final short FILTER_NONE = 0x0000;
 	final short FILTER_SUPPORT = 0x0001;
 	final short FILTER_WALL = 0x0002;
 	final short FILTER_BOY = 0x0004;
 	final short FILTER_STUFF = 0x0008;
+	final short FILTER_CONTROLS = 0x0016;
 	
 	final float CAMERA_WIDTH = 12;
 	final float CAMERA_HEIGHT = 8;
+
+	RevoluteJoint leftArmJoint, rightArmJoint, 
+		leftLegTopJoint, rightLegTopJoint,
+		leftLegBottomJoint, rightLegBottomJoint;
+	Body torso, torsoSupport;
+	
+	float legAngle = (float)Math.toRadians(100);
+	float armAngle = (float)Math.toRadians(60);
+	float headAngle = (float)Math.toRadians(30);
+	
+	enum Action
+	{
+		WalkRight,
+		WalkLeft,
+		Jump,
+		Grab
+	};
+	
+	Action action;
 	
 	protected void createWorld() {
 		
-		groundBody = createWall(500, 0.1f, 0);
-
+		groundBody = createGround(50, 0.1f, 0);
+		createControls();
+		
 		//createCircles();
 		//createBoxes();
 		
 		createStickManSideOn(0, 2.5f);
 	}
 	
-	RevoluteJoint leftArmJoint, rightArmJoint, 
-		leftLegTopJoint, rightLegTopJoint,
-		leftLegBottomJoint, rightLegBottomJoint;
-	Body torso, torsoSupport;
-	
-	float supportY;
+	private void createControls() {
 
-	float legAngle = (float)Math.toRadians(100);
-	float armAngle = (float)Math.toRadians(60);
-	float headAngle = (float)Math.toRadians(30);
+		walkLeftButton = createControlButton(CAMERA_WIDTH / 7, CAMERA_HEIGHT / 10);
+		walkRightButton = createControlButton(CAMERA_WIDTH / 7, CAMERA_HEIGHT / 10);
+		jumpButton = createControlButton(CAMERA_WIDTH / 7, CAMERA_HEIGHT / 20);
+		grabButton = createControlButton(CAMERA_WIDTH / 7, CAMERA_HEIGHT / 20);
+	}
+
+	private Fixture createControlButton(float width, float height) {
+		
+		PolygonShape shape = new PolygonShape();
+		shape.setAsBox(width, height);
+		
+		BodyDef bodyDef = new BodyDef();
+		bodyDef.type = BodyType.StaticBody;
+		
+		Body body = world.createBody(bodyDef);
+		
+		FixtureDef fixtureDef = new FixtureDef();
+		fixtureDef.shape = shape;
+		fixtureDef.density = 1;
+		fixtureDef.filter.categoryBits = FILTER_CONTROLS;
+		
+		return body.createFixture(fixtureDef);
+	}
 
 	private void createStickManSideOn(float x, float y) {
 		
@@ -150,7 +182,7 @@ public class StickManDemo1 implements ApplicationListener, InputProcessor {
 		
 		FixtureDef fixtureDef = new FixtureDef();
 		fixtureDef.shape = shape;
-		fixtureDef.density = 1;
+		fixtureDef.density = 1f;
 		
 		// -1 means no body parts collide
 		fixtureDef.filter.groupIndex = -1;
@@ -179,7 +211,6 @@ public class StickManDemo1 implements ApplicationListener, InputProcessor {
 		FixtureDef fixtureDef = new FixtureDef();
 		fixtureDef.shape = shape;
 		fixtureDef.density = 1;
-		//fixtureDef.friction = 100;
 		
 		// -1 means no body parts collide
 		fixtureDef.filter.groupIndex = -1;
@@ -221,18 +252,18 @@ public class StickManDemo1 implements ApplicationListener, InputProcessor {
 	private void createCircles() {
 		// next we add a few more circles
 		CircleShape circleShape = new CircleShape();
-		circleShape.setRadius(1);
+		circleShape.setRadius(0.25f);
 
-		for (int i = 0; i < 5; i++) {
+		for (int i = 0; i < 10; i++) {
 			BodyDef circleBodyDef = new BodyDef();
 			circleBodyDef.type = BodyType.DynamicBody;
-			circleBodyDef.position.x = -24 + (float)(Math.random() * 48);
-			circleBodyDef.position.y = 10 + (float)(Math.random() * 100);
+			circleBodyDef.position.x = -5 + (float)(Math.random() * 5);
+			circleBodyDef.position.y = 5 + ((float)Math.random() * 5);
 			Body circleBody = world.createBody(circleBodyDef);
 
 			FixtureDef fixtureDef = new FixtureDef();
 			fixtureDef.shape = circleShape;
-			fixtureDef.density = 10;
+			fixtureDef.density = 1;
 			
 			fixtureDef.filter.categoryBits = FILTER_STUFF;
 			fixtureDef.filter.maskBits = FILTER_STUFF | FILTER_BOY | FILTER_WALL;
@@ -248,23 +279,23 @@ public class StickManDemo1 implements ApplicationListener, InputProcessor {
 		// body. First we create a nice polygon representing a box 2 meters
 		// wide and high.
 		PolygonShape boxPoly = new PolygonShape();
-		boxPoly.setAsBox(1, 1);
+		boxPoly.setAsBox(0.25f, 0.25f);
 
 		// next we create the 50 box bodies using the PolygonShape we just
 		// defined. This process is similar to the one we used for the ground
 		// body. Note that we reuse the polygon for each body fixture.
-		for (int i = 0; i < 5; i++) {
+		for (int i = 0; i < 10; i++) {
 			// Create the BodyDef, set a random position above the
 			// ground and create a new body
 			BodyDef boxBodyDef = new BodyDef();
 			boxBodyDef.type = BodyType.DynamicBody;
-			boxBodyDef.position.x = -24 + (float)(Math.random() * 48);
-			boxBodyDef.position.y = 10 + (float)(Math.random() * 100);
+			boxBodyDef.position.x = -5 + (float)(Math.random() * 5);
+			boxBodyDef.position.y = 5 + (float)(Math.random() * 5);
 			Body boxBody = world.createBody(boxBodyDef);
 
 			FixtureDef fixtureDef = new FixtureDef();
 			fixtureDef.shape = boxPoly;
-			fixtureDef.density = 10;
+			fixtureDef.density = 1;
 
 			fixtureDef.filter.categoryBits = FILTER_STUFF;
 			fixtureDef.filter.maskBits = FILTER_STUFF | FILTER_BOY | FILTER_WALL;
@@ -277,33 +308,26 @@ public class StickManDemo1 implements ApplicationListener, InputProcessor {
 		boxPoly.dispose();
 	}
 
-	private Body createWall(float width, float height, float xOffset) {
-		// next we create a static ground platform. This platform
-		// is not moveable and will not react to any influences from
-		// outside. It will however influence other bodies. First we
-		// create a PolygonShape that holds the form of the platform.
-		// it will be 100 meters wide and 2 meters high, centered
-		// around the origin
-		PolygonShape groundPoly = new PolygonShape();
-		groundPoly.setAsBox(width, height);
-
-		// next we create the body for the ground platform. It's
-		// simply a static body.
-		BodyDef groundBodyDef = new BodyDef();
-		groundBodyDef.type = BodyType.StaticBody;
-		groundBodyDef.position.x = xOffset;
+	private Body createGround(float width, float height, float xOffset) {
 		
-		Body body = world.createBody(groundBodyDef);
+		PolygonShape shape = new PolygonShape();
+		shape.setAsBox(width, height);
+
+		BodyDef bodyDef = new BodyDef();
+		bodyDef.type = BodyType.StaticBody;
+		bodyDef.position.x = xOffset;
+		
+		Body body = world.createBody(bodyDef);
 
 		FixtureDef fixtureDef = new FixtureDef();
-		fixtureDef.shape = groundPoly;
-		fixtureDef.density = 10;
+		fixtureDef.shape = shape;
+		fixtureDef.density = 1f;
 		
 		fixtureDef.filter.categoryBits = FILTER_WALL;
 		fixtureDef.filter.maskBits = FILTER_BOY | FILTER_STUFF | FILTER_SUPPORT;
 		
 		body.createFixture(fixtureDef);
-		groundPoly.dispose();
+		shape.dispose();
 		
 		return body;
 	}
@@ -325,9 +349,14 @@ public class StickManDemo1 implements ApplicationListener, InputProcessor {
 		
 		// update the world with a fixed time step
 		world.step(timeStep, velocityIterations, positionIterations);
+
+		float cameraX = torso.getPosition().x;
+		float cameraY = torso.getPosition().y + 1;
 		
 		// follow the boy!
-		camera.getPosition().set(torso.getPosition().x, torso.getPosition().y + 1, 0);
+		camera.getPosition().set(cameraX, cameraY, 0);
+
+		setControlPositions(cameraX, cameraY);
 
 		// clear the screen and setup the projection matrix
 		GL10 gl = Gdx.app.getGraphics().getGL10();
@@ -372,6 +401,21 @@ public class StickManDemo1 implements ApplicationListener, InputProcessor {
 
 		// render the world using the debug renderer
 		renderer.render(world);
+	}
+
+	private void setControlPositions(float cameraX, float cameraY) {
+		
+		walkLeftButton.getBody().setTransform(
+			new Vector2(cameraX - (CAMERA_WIDTH * 0.33f), cameraY - (CAMERA_HEIGHT * 0.38f)), 0);
+		
+		walkRightButton.getBody().setTransform(
+			new Vector2(cameraX + (CAMERA_WIDTH * 0.33f), cameraY - (CAMERA_HEIGHT * 0.38f)), 0);
+		
+		jumpButton.getBody().setTransform(
+			new Vector2(cameraX, cameraY - (CAMERA_HEIGHT * 0.3f)), 0);
+		
+		grabButton.getBody().setTransform(
+			new Vector2(cameraX, cameraY - (CAMERA_HEIGHT * 0.43f)), 0);
 	}
 
 	/*Body aabbHit = null;
@@ -439,11 +483,6 @@ public class StickManDemo1 implements ApplicationListener, InputProcessor {
 	@Override public void dispose () {		
 		renderer.dispose();
 		world.dispose();
-
-		renderer = null;
-		world = null;
-		mouseJoint = null;
-		hitBody = null;
 	}
 
 	@Override public boolean keyDown (int keycode) {
@@ -465,7 +504,7 @@ public class StickManDemo1 implements ApplicationListener, InputProcessor {
 			// if the hit point is inside the fixture of the body
 			// we report it
 			if (fixture.testPoint(testPoint)) {
-				hitBody = fixture.getBody();
+				hitFixture = fixture;
 				return false;
 			} else
 				return true;
@@ -473,7 +512,18 @@ public class StickManDemo1 implements ApplicationListener, InputProcessor {
 	};
 
 	@Override public boolean touchDown (int x, int y, int pointer) {
-		// translate the mouse coordinates to world coordinates
+
+		hitFixture = null;
+		
+		camera.getScreenToWorld(x, y, testPoint);
+		world.QueryAABB(callback, testPoint.x - 0.0001f, testPoint.y - 0.0001f, testPoint.x + 0.0001f, testPoint.y + 0.0001f);
+		
+		if (hitFixture != null) {
+			
+			//hitFixture.
+		}
+		
+		/*// translate the mouse coordinates to world coordinates
 		camera.getScreenToWorld(x, y, testPoint);
 		// ask the world which bodies are within the given
 		// bounding box around the mouse pointer
@@ -499,29 +549,32 @@ public class StickManDemo1 implements ApplicationListener, InputProcessor {
 			hitBody.setAwake(true);
 		}
 
+		return false;*/
 		return false;
 	}
 
-	/** another temporary vector **/
-	Vector2 target = new Vector2();
+	///** another temporary vector **/
+	//Vector2 target = new Vector2();
 
 	@Override public boolean touchDragged (int x, int y, int pointer) {
-		// if a mouse joint exists we simply update
+		/*// if a mouse joint exists we simply update
 		// the target of the joint based on the new
 		// mouse coordinates
 		if (mouseJoint != null) {
 			camera.getScreenToWorld(x, y, target);
 			mouseJoint.setTarget(target);
 		}
+		return false;*/
 		return false;
 	}
 
 	@Override public boolean touchUp (int x, int y, int pointer) {
-		// if a mouse joint exists we simply destroy it
+		/*// if a mouse joint exists we simply destroy it
 		if (mouseJoint != null) {
 			world.destroyJoint(mouseJoint);
 			mouseJoint = null;
 		}
+		return false;*/
 		return false;
 	}
 	
