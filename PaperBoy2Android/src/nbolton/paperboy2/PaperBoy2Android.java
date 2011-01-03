@@ -8,6 +8,6 @@ public class PaperBoy2Android extends AndroidApplication {
 	/** Called when the activity is first created. */
 	@Override public void onCreate (Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
-		initialize(new PaperBoy2(), false, 16);
+		initialize(new Game(), false, 16);
 	}
 }
