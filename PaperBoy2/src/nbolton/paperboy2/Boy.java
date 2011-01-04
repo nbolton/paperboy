@@ -1,6 +1,9 @@
 package nbolton.paperboy2;
 
 import java.text.DecimalFormat;
+import java.util.ArrayList;
+
+import javax.print.attribute.standard.DateTimeAtCompleted;
 
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.math.Vector2;
@@ -18,21 +21,33 @@ import com.badlogic.gdx.physics.box2d.joints.RevoluteJointDef;
 
 public class Boy {
 	
-	private World world;
+	final float legTopAngle = (float)Math.toRadians(60);
+	final float legBottomAngle = (float)Math.toRadians(80);
+	final float armTopAngle = (float)Math.toRadians(60);
+	final float headAngle = (float)Math.toRadians(30);
 	
-	public RevoluteJoint leftArmJoint, rightArmJoint, 
+	World world;
+	
+	RevoluteJoint leftArmTopJoint, rightArmTopJoint, 
 		leftLegTopJoint, rightLegTopJoint,
 		leftLegBottomJoint, rightLegBottomJoint;
 	
-	public Body torso, torsoSupport1, torsoSupport2;
+	ArrayList<DistanceJoint> supportJoints = new ArrayList<DistanceJoint>();
 	
-	public float legAngle = (float)Math.toRadians(100);
-	public float armAngle = (float)Math.toRadians(60);
-	public float headAngle = (float)Math.toRadians(30);
+	Body torso, torsoSupport1, torsoSupport2;
+	Body head;
+	Body leftArmTop;
+	Body rightArmTop;
+	Body leftLegTop;
+	Body rightLegTop;
+	Body leftLegBottom;
+	Body rightLegBottom;
 	
-	public Action lastAction = Action.None;
-	public Action action = Action.WalkRight; //Action.None;
-	public Vector2 position;
+	Action lastAction = Action.None;
+	Action action = Action.WalkRight; //Action.None;
+	Vector2 position;
+	
+	long walkStartMillis;
 	
 	enum Action
 	{
@@ -50,42 +65,35 @@ public class Boy {
 	public void createStickManSideOn(float x, float y) {
 
 		torso = createRectangleBodyPart(x, y, 0.1f, 0.8f);		
-		Body head = createRoundBodyPart(x, y + 1.2f, 0.4f);
+		head = createRoundBodyPart(x, y + 1.2f, 0.4f);
 		
-		Body leftArm = createRectangleBodyPart(x, y, 0.1f, 0.65f);
-		Body rightArm = createRectangleBodyPart(x, y, 0.1f, 0.65f);
+		leftArmTop = createRectangleBodyPart(x, y, 0.1f, 0.65f);
+		rightArmTop = createRectangleBodyPart(x, y, 0.1f, 0.65f);
 		
-		Body leftLegTop = createRectangleBodyPart(x, y - 1.1f, 0.1f, 0.5f);
-		Body rightLegTop = createRectangleBodyPart(x, y - 1.1f, 0.1f, 0.5f);
-		Body leftLegBottom = createRectangleBodyPart(x, y - 1.9f, 0.1f, 0.5f);
-		Body rightLegBottom = createRectangleBodyPart(x, y - 1.9f, 0.1f, 0.5f);
+		leftLegTop = createRectangleBodyPart(x, y - 1.1f, 0.1f, 0.5f);
+		rightLegTop = createRectangleBodyPart(x, y - 1.1f, 0.1f, 0.5f);
+		
+		leftLegBottom = createRectangleBodyPart(x, y - 1.9f, 0.1f, 0.5f);
+		rightLegBottom = createRectangleBodyPart(x, y - 1.9f, 0.1f, 0.5f);
 
 		torsoSupport1 = createSupportBody(position.x - 2, position.y);
 		torsoSupport2 = createSupportBody(position.x + 2, position.y);
 		
 		joinBodyParts(torso, head, new Vector2(0, 0.8f), headAngle);
 		
-		leftArmJoint = joinBodyParts(torso, leftArm, new Vector2(0, 0.6f), -armAngle * 0.7f, armAngle);
-		rightArmJoint = joinBodyParts(torso, rightArm, new Vector2(0, 0.6f), -armAngle * 0.7f, armAngle);
+		leftArmTopJoint = joinBodyParts(torso, leftArmTop, new Vector2(0, 0.6f), -armTopAngle * 0.7f, armTopAngle * 0.3f);
+		rightArmTopJoint = joinBodyParts(torso, rightArmTop, new Vector2(0, 0.6f), -armTopAngle * 0.7f, armTopAngle * 0.3f);
 		
-		leftLegTopJoint = joinBodyParts(torso, leftLegTop, new Vector2(0, -0.7f), 0.1f, legAngle);
-		rightLegTopJoint = joinBodyParts(torso, rightLegTop, new Vector2(0, -0.7f), 0.1f, legAngle);
-		leftLegBottomJoint = joinBodyParts(leftLegTop, leftLegBottom, new Vector2(0, -0.4f), -legAngle * 1.5f, 0);
-		rightLegBottomJoint = joinBodyParts(rightLegTop, rightLegBottom, new Vector2(0, -0.4f), -legAngle * 1.5f, 0);
-
-		joinSupportBody(torso, torsoSupport1, new Vector2(0, 0.7f));
-		joinSupportBody(torso, torsoSupport2, new Vector2(0, 0.7f));
-		joinSupportBody(torso, torsoSupport1, new Vector2(0, -0.7f));
-		joinSupportBody(torso, torsoSupport2, new Vector2(0, -0.7f));
+		leftLegTopJoint = joinBodyParts(torso, leftLegTop, new Vector2(0, -0.7f), legTopAngle * 0.1f, legTopAngle * 0.9f);
+		rightLegTopJoint = joinBodyParts(torso, rightLegTop, new Vector2(0, -0.7f), legTopAngle * 0.1f, legTopAngle * 0.9f);
 		
-		//supportY = y + 5;
-		//supportLeft = createSupportBody(new Vector2(x - 6, supportY));
-		//supportRight = createSupportBody(new Vector2(x + 6, supportY));
+		leftLegBottomJoint = joinBodyParts(leftLegTop, leftLegBottom, new Vector2(0, -0.4f), -legBottomAngle, 0);
+		rightLegBottomJoint = joinBodyParts(rightLegTop, rightLegBottom, new Vector2(0, -0.4f), -legBottomAngle, 0);
 
-		//joinSupportBody(head, supportLeft, new Vector2(0, 0));
-		//joinSupportBody(torso, supportLeft, new Vector2(0, -1f));
-		//joinSupportBody(head, supportRight, new Vector2(0, 0));
-		//joinSupportBody(torso, supportRight, new Vector2(0, -1f));
+		supportJoints.add(joinSupportBody(torso, torsoSupport1, new Vector2(0, 0.7f)));
+		supportJoints.add(joinSupportBody(torso, torsoSupport2, new Vector2(0, 0.7f)));
+		supportJoints.add(joinSupportBody(torso, torsoSupport1, new Vector2(0, -0.7f)));
+		supportJoints.add(joinSupportBody(torso, torsoSupport2, new Vector2(0, -0.7f)));
 	}
 	
 	private Body createSupportBody(float x, float y)
@@ -141,7 +149,7 @@ public class Boy {
 		//jointDef.upperAngle = upperAngle;
 		
 		jointDef.enableMotor = true;
-		jointDef.maxMotorTorque = 1000;
+		jointDef.maxMotorTorque = 10;
 		
 		return (RevoluteJoint)world.createJoint(jointDef);
 	}
@@ -203,38 +211,92 @@ public class Boy {
 		return body;
 	}
 	
-	float walkDelta = 0;
+	private long getWalkTimeElapsedMillis() {
+		return System.currentTimeMillis() - walkStartMillis;
+	}
 	
 	public void render() {
 		
-		float delta = Gdx.graphics.getDeltaTime();
+		//float delta = Gdx.graphics.getDeltaTime();
 		
 		// action has been toggled
 		if (lastAction != action) {
 			
+			System.out.println(lastAction.toString() + " => " + action.toString());
+			
 			// boy has started walking - reset delta
 			if (action == Action.WalkLeft || action == Action.WalkRight)
-				walkDelta = 0;
-		} else {
-			walkDelta += delta;
+				walkStartMillis = System.currentTimeMillis();
 		}
+
+		DecimalFormat f = new DecimalFormat("0.00");
 		
 		if (action == Action.WalkRight) {
 			
-			rightLegBottomJoint.setMotorSpeed(getLegMotorSpeed());
+			rightLegTopJoint.setMotorSpeed(getLegTopSpeed(0));
+			//leftLegTopJoint.setMotorSpeed(getLeftLegTopSpeed());
+			
+			rightLegBottomJoint.setMotorSpeed(getLegBottomSpeed(0));
+			//leftLegBottomJoint.setMotorSpeed(getLeftLegBottomSpeed());
 
-			DecimalFormat f = new DecimalFormat("0.00");
-			System.out.println(f.format(getLegMotorSpeed()));
+			//System.out.println(f.format(getLegTopSpeed()));
+			//System.out.println(f.format(getWalkTimeElapsedMillis()));
+			
+		} else {
+			
+			standStill();
 		}
 		
 		lastAction = action;
 	}
-	
-	private float getLegMotorSpeed() {
-		return getOscillation() * 2;
+
+	private float getLegTopSpeed(float offset) {
+		return getWalkMotion(offset) * 5;
 	}
 	
-	private float getOscillation() {
-		return (float)Math.sin(walkDelta);
+	private float getLegBottomSpeed(float offset) {
+		return -getWalkMotion(offset) * 15;
+	}
+
+	private float getWalkMotion(float offset) {
+		return (float)Math.cos((getWalkTimeElapsedMillis() + offset) * 0.008f);
+	}
+	
+	private void standStill() {
+		
+		rightLegBottomJoint.setMotorSpeed(0);
+		leftLegBottomJoint.setMotorSpeed(0);
+	}
+	
+	public void die() {
+		
+		for (DistanceJoint joint : supportJoints) {
+			world.destroyJoint(joint);
+		}
+
+		leftArmTopJoint.enableMotor(false);
+		rightArmTopJoint.enableMotor(false);
+		
+		rightLegTopJoint.enableMotor(false);
+		leftLegTopJoint.enableMotor(false);
+		
+		rightLegBottomJoint.enableMotor(false);
+		leftLegBottomJoint.enableMotor(false);
+	}
+
+	public void setAction(Action action) {
+		this.action = action;
+	}
+
+	public Action getAction() {
+		return action;
+	}
+
+	public void setPosition(Vector2 position) {
+		this.position = position;
+	}
+
+	public Vector2 getPosition() {
+		return position;
 	}
 }

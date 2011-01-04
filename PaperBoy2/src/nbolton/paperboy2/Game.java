@@ -20,6 +20,7 @@ import com.badlogic.gdx.physics.box2d.QueryCallback;
 import com.badlogic.gdx.physics.box2d.World;
 import com.badlogic.gdx.physics.box2d.BodyDef.BodyType;
 import com.badlogic.gdx.physics.box2d.joints.MouseJoint;
+import com.badlogic.gdx.utils.MathUtils;
 
 public class Game implements ApplicationListener, InputProcessor {
 	
@@ -51,15 +52,15 @@ public class Game implements ApplicationListener, InputProcessor {
 	protected void createWorld() {
 
 		boy = new Boy(world);
-		boy.position = new Vector2(0, 3.2f);
+		boy.setPosition(new Vector2(-3, 3.2f));
 		
 		ground = createGround(50, 0.1f, 0);
 		createControls();
 		
-		createCircles();
-		createBoxes();
+		//createCircles();
+		//createBoxes();
 		
-		boy.createStickManSideOn(boy.position.x, boy.position.y);
+		boy.createStickManSideOn(boy.getPosition().x, boy.getPosition().y);
 	}
 	
 	private void createControls() {
@@ -93,7 +94,7 @@ public class Game implements ApplicationListener, InputProcessor {
 		CircleShape circleShape = new CircleShape();
 		circleShape.setRadius(0.25f);
 
-		for (int i = 0; i < 10; i++) {
+		for (int i = 0; i < 20; i++) {
 			BodyDef circleBodyDef = new BodyDef();
 			circleBodyDef.type = BodyType.DynamicBody;
 			circleBodyDef.position.x = -5 + (float)(Math.random() * 5);
@@ -123,7 +124,7 @@ public class Game implements ApplicationListener, InputProcessor {
 		// next we create the 50 box bodies using the PolygonShape we just
 		// defined. This process is similar to the one we used for the ground
 		// body. Note that we reuse the polygon for each body fixture.
-		for (int i = 0; i < 10; i++) {
+		for (int i = 0; i < 20; i++) {
 			// Create the BodyDef, set a random position above the
 			// ground and create a new body
 			BodyDef boxBodyDef = new BodyDef();
@@ -182,34 +183,27 @@ public class Game implements ApplicationListener, InputProcessor {
 
 	@Override public void render () {
 		
-		//float timeStep = 1.0f / 6000.f;
 		float delta = Gdx.graphics.getDeltaTime(); // i read this was bad?
 		int velocityIterations = 10;
 		int positionIterations = 8;
 		
 		// update the world with a fixed time step
 		world.step(delta, velocityIterations, positionIterations);
-		//world.step(0.0001f, velocityIterations, positionIterations);
-		//world.clearForces();
 		
-		final float speed = 6;
-		switch (boy.action) {
+		/*final float speed = 6;
+		switch (boy.getAction()) {
 			case WalkLeft:
-				boy.position.x -= delta * speed;
+				boy.getPosition().x -= delta * speed;
 				break;
 				
 			case WalkRight:
-				boy.position.x += delta * speed;
+				boy.getPosition().x += delta * speed;
 				break;
-		}
+		}*/
 		
 		boy.render();
 		
-		//torsoSupport1.setTransform(boyPosition, 0);
-		//rightLegBottomJoint.
-		
-		float cameraX = boy.torsoSupport1.getPosition().x;
-		//float cameraY = torso.getPosition().y + 1;
+		float cameraX = boy.getPosition().x;
 		float cameraY = ground.getPosition().y + 1.7f;
 		
 		// follow the boy!
@@ -222,42 +216,6 @@ public class Game implements ApplicationListener, InputProcessor {
 		gl.glClear(GL10.GL_COLOR_BUFFER_BIT);
 		camera.setMatrices();
 		
-		/*float leftAngle = leftLegTopJoint.getJointAngle();
-		float legAngleShort = legAngle * 0.8f;
-
-		if (leftAngle > legAngleShort) {
-			
-			leftMotorDirection = -1;
-		}
-		
-		if (leftAngle < -legAngleShort) {
-			
-			leftMotorDirection = 1;
-		}
-		
-		System.out.println("a: " + leftAngle + " / m: " + leftMotorDirection);
-		
-		rightLegBottomJoint.setMotorSpeed(8);
-		leftLegBottomJoint.setMotorSpeed(-8);
-
-		leftMotorVelocity = delta * leftMotorDirection * motorSpeed;
-		rightMotorVelocity = -leftMotorVelocity;
-		
-		leftLegTopJoint.setMotorSpeed(leftMotorVelocity * 0.9f);
-		rightLegTopJoint.setMotorSpeed(rightMotorVelocity * 0.9f);
-		
-		leftArmJoint.setMotorSpeed(-leftMotorVelocity * 0.5f);
-		rightArmJoint.setMotorSpeed(-rightMotorVelocity * 0.5f);
-		
-		// ensure the support block stays on the same y plane, but follows the head.
-		//float supportY = torso.getPosition().y;
-		float supportY = 7;
-		supportLeft.setTransform(new Vector2(torso.getPosition().x - 10, supportY), 0);
-		supportRight.setTransform(new Vector2(torso.getPosition().x + 10, supportY), 0);*/
-		
-		//torso.setTransform(torso.getPosition(), 0);
-		//torsoSupport.setTransform(new Vector2(torso.getPosition().x, groundBody.getPosition().y + 6), 0);
-
 		// render the world using the debug renderer
 		renderer.render(world);
 	}
@@ -346,21 +304,27 @@ public class Game implements ApplicationListener, InputProcessor {
 
 	@Override public boolean keyDown (int keycode) {
 		
+		System.out.println("keyDown: " + keycode);
+		
 		switch (keycode) {
 			case Input.Keys.KEYCODE_DPAD_LEFT:
-				boy.action = Action.WalkLeft;
+				boy.setAction(Action.WalkLeft);
 				break;
 
 			case Input.Keys.KEYCODE_DPAD_RIGHT:
-				boy.action = Action.WalkRight;
+				boy.setAction(Action.WalkRight);
 				break;
 				
 			case Input.Keys.KEYCODE_DPAD_UP:
-				boy.action = Action.Jump;
+				boy.setAction(Action.Jump);
 				break;
 				
 			case Input.Keys.KEYCODE_DPAD_DOWN:
-				boy.action = Action.Grab;
+				boy.setAction(Action.Grab);
+				break;
+				
+			case Input.Keys.KEYCODE_DEL:
+				boy.die();
 				break;
 		}
 		
@@ -372,7 +336,9 @@ public class Game implements ApplicationListener, InputProcessor {
 	}
 
 	@Override public boolean keyUp (int keycode) {
-		boy.action = Action.None;
+
+		System.out.println("keyUp: " + keycode);
+		//boy.setAction(Action.None);
 		return false;
 	}
 
@@ -392,6 +358,8 @@ public class Game implements ApplicationListener, InputProcessor {
 
 	@Override public boolean touchDown (int x, int y, int pointer) {
 
+		boy.die();
+		
 		hitFixture = null;
 		
 		camera.getScreenToWorld(x, y, testPoint);
