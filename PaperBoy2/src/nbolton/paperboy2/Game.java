@@ -12,7 +12,6 @@ import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.physics.box2d.Body;
 import com.badlogic.gdx.physics.box2d.BodyDef;
 import com.badlogic.gdx.physics.box2d.Box2DDebugRenderer;
-import com.badlogic.gdx.physics.box2d.CircleShape;
 import com.badlogic.gdx.physics.box2d.Fixture;
 import com.badlogic.gdx.physics.box2d.FixtureDef;
 import com.badlogic.gdx.physics.box2d.PolygonShape;
@@ -20,7 +19,6 @@ import com.badlogic.gdx.physics.box2d.QueryCallback;
 import com.badlogic.gdx.physics.box2d.World;
 import com.badlogic.gdx.physics.box2d.BodyDef.BodyType;
 import com.badlogic.gdx.physics.box2d.joints.MouseJoint;
-import com.badlogic.gdx.utils.MathUtils;
 
 public class Game implements ApplicationListener, InputProcessor {
 	
@@ -89,7 +87,7 @@ public class Game implements ApplicationListener, InputProcessor {
 		return body.createFixture(fixtureDef);
 	}
 	
-	private void createCircles() {
+	/*private void createCircles() {
 		// next we add a few more circles
 		CircleShape circleShape = new CircleShape();
 		circleShape.setRadius(0.25f);
@@ -146,7 +144,7 @@ public class Game implements ApplicationListener, InputProcessor {
 
 		// we are done, all that's left is disposing the boxPoly
 		boxPoly.dispose();
-	}
+	}*/
 
 	private Body createGround(float width, float height, float xOffset) {
 		
